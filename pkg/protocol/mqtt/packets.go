@@ -55,8 +55,9 @@ type Flags = uint8 // uint4
 // +-----------------------------------+
 // | 0 |  PACKET TYPE  |     FLAGS     |
 // +-----------------------------------+
-// | 1 | 1     VARIABLE LENGTH INT     | MSB is the 'continuation bit', and the 7 LSB contain the next bits of the int
-// |...| 0            ...              | 0 in the MSG indicates that the variable length int is done
+// | 1 | 1     VARIABLE LENGTH INT     | MSB is the 'continuation bit', and the 7 LSB contain the next bits of the int.
+// | 2 | 1            ...              | 0 in the MSG indicates that the variable length int is done. The maximum number
+// |...| 0            ...              | of bytes in the Variable Byte Integer field is four: so 4*7 bit = max 28 bit
 // +-----------------------------------+
 type PacketHeader struct {
 	Type            PacketType
