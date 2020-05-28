@@ -60,11 +60,23 @@ type Flags = uint8 // uint4
 // |...| 0            ...              | of bytes in the Variable Byte Integer field is four: so 4*7 bit = max 28 bit
 // +-----------------------------------+
 type PacketHeader struct {
-	Type            PacketType
-	Flags           Flags
-	RemainingLength uint32
+	Type   PacketType
+	Flags  Flags
+	Length uint32
 }
 
 type Packet struct {
 	PacketHeader
+}
+
+type RawPacket struct {
+	Header  PacketHeader
+	Payload []byte
+}
+
+func NewRawPacket(header PacketHeader) *RawPacket {
+	return &RawPacket{
+		Header:  header,
+		Payload: make([]byte, header.Length),
+	}
 }

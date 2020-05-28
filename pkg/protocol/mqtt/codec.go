@@ -20,7 +20,7 @@ func ReadPacketHeader(header *PacketHeader, reader io.Reader) (int, error) {
 	header.Flags = buf[0] & 0xF
 
 	length, nLength, err := ReadVariableByteUint32(reader) // todo blocking busy wait
-	header.RemainingLength = length
+	header.Length = length
 	return n + nLength, err
 }
 
