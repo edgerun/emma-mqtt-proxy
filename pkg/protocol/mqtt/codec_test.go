@@ -15,7 +15,7 @@ func TestReadPacketHeader(t *testing.T) {
 		0b11010000, // ... some next packet
 	})
 
-	read, err := ReadPacketHeader(header, reader)
+	read, err := ReadPacketHeader(reader, header)
 
 	if err != nil {
 		t.Error("Unexpected error", err)

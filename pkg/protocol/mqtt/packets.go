@@ -1,6 +1,7 @@
 package mqtt
 
-type PacketType = uint8 // uint4
+type PacketType = uint8         // uint4
+const MaxPacketSize = 268435455 // packet size is stored in a variable byte integer with max 4 bytes: (2^(7*4)) - 1
 
 const (
 	TypeReserved    PacketType = 0  // not a real packet type, type is reserved

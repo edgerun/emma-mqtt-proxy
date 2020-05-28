@@ -47,7 +47,7 @@ func (s *Scanner) Scan() bool {
 	// read packet header
 	log.Println("Reading next packet header")
 	header := &PacketHeader{}
-	_, err := ReadPacketHeader(header, s.r)
+	_, err := ReadPacketHeader(s.r, header)
 	if err != nil {
 		s.setErr(err)
 		s.done = true
