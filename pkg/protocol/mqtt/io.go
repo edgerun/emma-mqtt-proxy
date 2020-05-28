@@ -49,10 +49,12 @@ func (s *Scanner) Scan() bool {
 	header := &PacketHeader{}
 	_, err := ReadPacketHeader(s.r, header)
 	if err != nil {
+		log.Println("Error while reading packet header", err)
 		s.setErr(err)
 		s.done = true
 		return false
 	}
+	log.Printf("Read packet type %s with remaining length %d\n", PacketTypeName(header.Type), header.Length)
 
 	// allocate a buffer for the entire remaining packet
 	rawPacket := NewRawPacket(*header)
@@ -62,14 +64,16 @@ func (s *Scanner) Scan() bool {
 	}
 
 	// read the remaining packet fully
-	log.Println("Reading next packet of size", rawPacket.Header.Length)
+	log.Println("Reading remaining packet of size", rawPacket.Header.Length)
 	_, err = io.ReadFull(s.r, rawPacket.Payload)
 	if err != nil {
+		log.Println("Error while reading packet header", err)
 		s.setErr(err)
 		s.done = true
 		return false
 	}
 
 	s.packet = rawPacket
+	log.Println("Successfully scanned packet", PacketTypeName(s.packet.Header.Type))
 	return true
 }

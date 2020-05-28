@@ -95,7 +95,7 @@ func ReadPacketHeader(reader io.Reader, header *PacketHeader) (int, error) {
 	header.Type = (buf[0] >> 4) & 0xF
 	header.Flags = buf[0] & 0xF
 
-	length, nLength, err := ReadVariableByteUint32(reader) // todo blocking busy wait
+	length, nLength, err := ReadVariableByteUint32(reader)
 	header.Length = length
 	return n + nLength, err
 }
@@ -113,7 +113,7 @@ func ReadVariableByteUint32(reader io.Reader) (uint32, int, error) {
 			return 0, read + n, err
 		}
 		if n != 1 {
-			continue // TODO: busy wait
+			continue
 		}
 
 		b := buf[0]
