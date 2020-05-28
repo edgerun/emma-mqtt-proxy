@@ -2,7 +2,7 @@ package filter
 
 import (
 	"fmt"
-	"github.com/edgerun/emma-mqtt-proxy/pkg/protocol/mqtt"
+	"github.com/edgerun/emma-mqtt-proxy/pkg/mqtt"
 )
 
 type Action int

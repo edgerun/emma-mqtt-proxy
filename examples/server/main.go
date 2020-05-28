@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/edgerun/emma-mqtt-proxy/pkg/protocol/mqtt"
+	"github.com/edgerun/emma-mqtt-proxy/pkg/mqtt"
 	"log"
 	"net"
 	"sync"
