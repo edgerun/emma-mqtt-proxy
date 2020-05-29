@@ -26,7 +26,7 @@ func WriteFull(w io.Writer, buf []byte) (n int, err error) {
 	return
 }
 
-func PutVariableInt(buf []byte, i uint32) (pos int) {
+func PutVariableInt(buf []byte, i uint32) (write int) {
 	var x = i // running variable that's incrementally shifted to the right
 
 	for x > 0 {
@@ -34,9 +34,9 @@ func PutVariableInt(buf []byte, i uint32) (pos int) {
 		if x > 127 {
 			b |= cmask // add continuation bit
 		}
-		buf[pos] = b
+		buf[write] = b
 
-		pos++
+		write++
 		x >>= 7
 	}
 

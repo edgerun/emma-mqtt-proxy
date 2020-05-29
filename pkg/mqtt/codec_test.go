@@ -29,6 +29,27 @@ func TestReadPacketHeader(t *testing.T) {
 
 }
 
+func TestReadPacketHeader_Connect(t *testing.T) {
+	reader := bytes.NewReader([]byte{
+		16, 31,
+		0, 6, 77, 81, 73, 115, 100, 112,
+		3, 2, 0, 60, 0, 17, 109, 111, 115,
+		113, 112, 117, 98, 124, 54, 56, 53, 52,
+		45, 116, 121, 116, 111,
+	})
+
+	header := &PacketHeader{}
+	_, err := ReadPacketHeader(reader, header)
+
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	if header.Type != TypeConnect {
+		t.Errorf("Expected packet type %s, got %s", "CONNECT", PacketTypeName(header.Type))
+	}
+
+}
+
 func TestReadVariableByteUint32(t *testing.T) {
 	// TODO: write more tests (+ error cases)
 

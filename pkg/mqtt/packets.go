@@ -1,7 +1,15 @@
 package mqtt
 
-type PacketType = uint8         // uint4
+type PacketType = uint8 // uint4
+type QoS = byte
+
 const MaxPacketSize = 268435455 // packet size is stored in a variable byte integer with max 4 bytes: (2^(7*4)) - 1
+
+const (
+	QoS1 QoS = 0
+	QoS2 QoS = 1
+	QoS3 QoS = 2
+)
 
 const (
 	TypeReserved    PacketType = 0  // not a real packet type, type is reserved
@@ -66,8 +74,12 @@ type PacketHeader struct {
 	Length uint32
 }
 
-type Packet struct {
-	PacketHeader
+type Packet interface {
+	Header() *PacketHeader
+}
+
+type packet struct {
+	header *PacketHeader
 }
 
 type RawPacket struct {
@@ -75,9 +87,38 @@ type RawPacket struct {
 	Payload []byte
 }
 
+type ConnectFlags struct {
+	CleanSession bool
+	WillFlag     bool
+	WillQoS      QoS
+	WillRetain   bool
+	PasswordFlag bool
+	UserNameFlag bool
+}
+
+type ConnectPacket struct {
+	packet
+	ConnectFlags
+	ProtocolName  string
+	ProtocolLevel uint8
+	KeepAlive     uint16
+	ClientId      string
+	WillTopic     string
+	WillMessage   string
+	UserName      string
+	Password      []byte
+}
+
+func (p *packet) Header() *PacketHeader {
+	return p.header
+}
+
+func (p *ConnectPacket) Header() *PacketHeader {
+	return p.header
+}
+
 func NewRawPacket(header PacketHeader) *RawPacket {
 	return &RawPacket{
-		Header:  header,
-		Payload: make([]byte, header.Length),
+		Header: header,
 	}
 }

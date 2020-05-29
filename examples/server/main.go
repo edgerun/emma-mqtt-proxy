@@ -102,6 +102,23 @@ func mqttProxyHandler(client net.Conn) {
 	log.Println("exitting MqttProxyHandler")
 }
 
+func binaryPrinter(conn net.Conn) {
+
+	for {
+		buf := make([]byte, 50)
+		read, err := conn.Read(buf)
+		if err != nil {
+			log.Println("Error while reading from stream", err)
+			break
+		}
+		log.Printf("Read %d bytes\n", read)
+		rbuf := buf[:(read + 1)]
+		for i, b := range rbuf {
+			log.Printf("%d: %d\n", i, b)
+		}
+	}
+}
+
 func main() {
 	ln, err := net.Listen("tcp", "127.0.0.1:1883")
 	if err != nil {
@@ -116,6 +133,6 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Println("Calling connection handler")
-		mqttProxyHandler(conn)
+		go binaryPrinter(conn)
 	}
 }
