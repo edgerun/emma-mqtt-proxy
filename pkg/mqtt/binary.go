@@ -108,12 +108,16 @@ func VariableByteUint32(buf *bytes.Buffer) (result uint32, err error) {
 func PutVariableByteUint32(buf *bytes.Buffer, val uint32) {
 	var x = val // running variable that's incrementally shifted to the right
 
-	for x > 0 {
+	for {
 		b := byte(x & dMask)
 		if x > 127 {
 			b |= cMask // add continuation bit
 		}
 		buf.WriteByte(b)
 		x >>= 7
+
+		if x <= 0 {
+			break
+		}
 	}
 }

@@ -163,3 +163,31 @@ func TestPutLengthEncodedString_WithNumbers(t *testing.T) {
 		}
 	}
 }
+
+func TestPutVariableByteUint32(t *testing.T) {
+	buf := bytes.NewBuffer([]byte{0, 0, 0, 0, 0})
+
+	buf.Reset()
+	PutVariableByteUint32(buf, 0)
+	if buf.Len() != 1 {
+		t.Error("unexpected buffer length ", buf.Len())
+	}
+
+	buf.Reset()
+	PutVariableByteUint32(buf, 1)
+	if buf.Len() != 1 {
+		t.Error("unexpected buffer length ", buf.Len())
+	}
+
+	buf.Reset()
+	PutVariableByteUint32(buf, 127)
+	if buf.Len() != 1 {
+		t.Error("unexpected buffer length ", buf.Len())
+	}
+
+	buf.Reset()
+	PutVariableByteUint32(buf, 128)
+	if buf.Len() != 2 {
+		t.Error("unexpected buffer length ", buf.Len())
+	}
+}
