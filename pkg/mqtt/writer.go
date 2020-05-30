@@ -14,7 +14,7 @@ type Writer struct {
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{
 		w:    w,
-		hBuf: bytes.NewBuffer(make([]byte, 4)),
+		hBuf: bytes.NewBuffer(make([]byte, 5)),
 		pBuf: bytes.NewBuffer(make([]byte, 4096)),
 	}
 }

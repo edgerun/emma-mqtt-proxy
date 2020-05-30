@@ -82,11 +82,6 @@ type packet struct {
 	header *PacketHeader
 }
 
-type RawPacket struct {
-	Header  PacketHeader
-	Payload []byte
-}
-
 type ConnectFlags struct {
 	CleanSession bool
 	WillFlag     bool
@@ -117,12 +112,6 @@ type ConnAckPacket struct {
 
 func (p *packet) Header() *PacketHeader {
 	return p.header
-}
-
-func NewRawPacket(header PacketHeader) *RawPacket {
-	return &RawPacket{
-		Header: header,
-	}
 }
 
 func (h *PacketHeader) packetByteSize() int {

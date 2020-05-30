@@ -7,6 +7,9 @@ import (
 	"math"
 )
 
+const dMask = 0b01111111
+const cMask = 0b10000000
+
 func Uint16(buf *bytes.Buffer) uint16 {
 	return binary.BigEndian.Uint16(buf.Next(2))
 }
@@ -23,7 +26,7 @@ func LengthEncodedString(buf *bytes.Buffer) (str string, err error) {
 	}
 
 	if buf.Len() < strLen {
-		err = errors.New("buffer to short")
+		err = errors.New("buffer too short")
 		return
 	}
 
@@ -92,9 +95,9 @@ func VariableByteUint32(buf *bytes.Buffer) (result uint32, err error) {
 			return
 		}
 
-		result += uint32(b&dmask) << (7 * read)
+		result += uint32(b&dMask) << (7 * read)
 
-		if b&cmask == 0 {
+		if b&cMask == 0 {
 			break
 		}
 	}
@@ -106,9 +109,9 @@ func PutVariableByteUint32(buf *bytes.Buffer, val uint32) {
 	var x = val // running variable that's incrementally shifted to the right
 
 	for x > 0 {
-		b := byte(x & dmask)
+		b := byte(x & dMask)
 		if x > 127 {
-			b |= cmask // add continuation bit
+			b |= cMask // add continuation bit
 		}
 		buf.WriteByte(b)
 		x >>= 7

@@ -53,6 +53,29 @@ func (s *Streamer) bail(err error) bool {
 	return false
 }
 
+func readHeaderFrom(r io.Reader) (h *PacketHeader, err error) {
+	// FIXME seems unnecessarily complicated
+	buf := make([]byte, 5)
+
+	n, err := r.Read(buf[:2])
+	if n != 2 {
+		// FIXME
+		err = errors.New("error reading header")
+	}
+	if err != nil {
+		return
+	}
+
+	for i := 1; (buf[i]&cMask) > 0 && i < 5; i++ {
+		n, err = r.Read(buf[i+1 : i+2])
+		if err != nil {
+			return
+		}
+	}
+
+	return DecodeHeader(bytes.NewBuffer(buf))
+}
+
 func (s *Streamer) Next() bool {
 	if s.done {
 		return false
@@ -61,13 +84,12 @@ func (s *Streamer) Next() bool {
 	r := s.r
 
 	// read the packet header
-	var header = &PacketHeader{}
-	_, err := ReadPacketHeader(r, header)
+	header, err := readHeaderFrom(r)
 	if err != nil {
 		return s.bail(err)
 	}
 
-	// TODO: apply filters and potentially drop or pipe packet
+	// TODO: apply filters and potentially drop packet, or skip decoding and copy data directly
 
 	// prepare limited reader
 	if s.buf.Len() != 0 {

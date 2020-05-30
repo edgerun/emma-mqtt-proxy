@@ -5,6 +5,18 @@ import (
 	"testing"
 )
 
+func TestDecodePublishPacket(t *testing.T) {
+	input := []byte{
+		// a publish packet
+		48, 10, // Header (publish)
+		0, 4, // Topic length
+		116, 101, 115, 116, // Topic (test)
+		116, 101, 115, 116, // Payload (test),
+	}
+
+	println(input) // TODO
+}
+
 func TestDecodeConnectPacket(t *testing.T) {
 	reader := bytes.NewReader([]byte{
 		// connect packet

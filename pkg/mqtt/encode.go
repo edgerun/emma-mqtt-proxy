@@ -73,8 +73,6 @@ func encodeConnectFlags(buf *bytes.Buffer, p *ConnectPacket) (err error) {
 		flags |= 0x2
 	}
 
-	fmt.Printf("CONNECT FLAGS: %b\n", flags)
-
 	buf.WriteByte(flags)
 	return
 }
