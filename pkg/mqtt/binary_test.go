@@ -31,6 +31,47 @@ func TestLengthEncodedString(t *testing.T) {
 	println(string(buf.Next(2)))
 }
 
+func TestPutLengthEncodedString(t *testing.T) {
+	buf := bytes.NewBuffer(make([]byte, 32))
+	buf.Reset()
+
+	PutLengthEncodedString(buf, "MQTT")
+
+	actual := buf.Next(6)
+	expected := []byte{
+		0b00000000, // 0 (Length MSB)
+		0b00000100, // 4 (Length LSB)
+		0b01001101, // M
+		0b01010001, // Q
+		0b01010100, // T
+		0b01010100, // T
+	}
+
+	for i, b := range actual {
+		if expected[i] != b {
+			t.Errorf("Mismatch at index %d: %b != %b", i, b, expected[i])
+		}
+	}
+}
+
+func TestLengthEncodedStringIntegration(t *testing.T) {
+	buf := bytes.NewBuffer(make([]byte, 32))
+	buf.Reset()
+
+	str := "MQTT"
+
+	PutLengthEncodedString(buf, str)
+	actual, err := LengthEncodedString(buf)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+
+	if actual != str {
+		t.Errorf("mismatch %s != %s", str, actual)
+	}
+
+}
+
 func TestVariableByteUint32(t *testing.T) {
 	// TODO: write more tests (+ error cases)
 
@@ -74,7 +115,6 @@ func TestVariableByteUint32(t *testing.T) {
 		}
 	}
 }
-
 
 func TestName(t *testing.T) {
 	slice := []byte{
