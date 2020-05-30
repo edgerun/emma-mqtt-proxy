@@ -17,6 +17,8 @@ func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error
 	case TypeConnAck:
 		err = EncodeConnAckPacket(buf, p.(*ConnAckPacket))
 		break
+	case TypePingReq, TypePingResp:
+		break
 	default:
 		return errors.New(fmt.Sprintf("unknown packet type %d", packetType))
 	}

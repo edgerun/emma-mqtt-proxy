@@ -111,6 +111,14 @@ type ConnAckPacket struct {
 	ReturnCode     byte
 }
 
+type PingReqPacket struct {
+	packet
+}
+
+type PingRespPacket struct {
+	packet
+}
+
 func (p *packet) Header() *PacketHeader {
 	return p.header
 }
