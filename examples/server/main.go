@@ -17,7 +17,7 @@ func readPackets(conn net.Conn, packets chan mqtt.Packet) {
 		}
 
 		packet := streamer.Packet()
-		log.Printf("[%s] sent packet: %s\n", conn.RemoteAddr(), mqtt.PacketTypeName(packet.Header().Type))
+		log.Printf("[%s] sent packet: %s\n", conn.RemoteAddr(), mqtt.PacketTypeName(packet.Type()))
 		packets <- packet
 	}
 

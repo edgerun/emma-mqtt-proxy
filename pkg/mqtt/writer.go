@@ -27,7 +27,7 @@ func (w *Writer) Write(packet Packet) (written int64, err error) {
 	pBuf.Reset()
 
 	// write packet into packet buffer
-	err = EncodePacket(pBuf, packet, packet.Header().Type)
+	err = EncodePacket(pBuf, packet, packet.Type())
 	if err != nil {
 		return
 	}

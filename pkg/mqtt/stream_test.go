@@ -34,9 +34,8 @@ func TestStreamer_ParseConnectPacket(t *testing.T) {
 		return
 	}
 
-	header := p.Header()
-	if header.Type != TypeConnect {
-		t.Errorf("expected packet type %s, got %s", "CONNECT", PacketTypeName(header.Type))
+	if p.Type() != TypeConnect {
+		t.Errorf("expected packet type %s, got %s", "CONNECT", PacketTypeName(p.Type()))
 	}
 	cp := p.(*ConnectPacket)
 

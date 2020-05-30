@@ -75,6 +75,7 @@ type PacketHeader struct {
 }
 
 type Packet interface {
+	Type() PacketType
 	Header() *PacketHeader
 }
 
@@ -114,6 +115,10 @@ func (p *packet) Header() *PacketHeader {
 	return p.header
 }
 
+func (p *packet) Type() PacketType {
+	return p.header.Type
+}
+
 func (h *PacketHeader) packetByteSize() int {
 	return int(h.Length) + h.byteSize()
 }
@@ -134,5 +139,5 @@ func (h *PacketHeader) byteSize() int {
 		return 5
 	}
 
-	panic("Header too large")
+	panic("header too large")
 }
