@@ -8,11 +8,16 @@ import (
 func TestStreamer_ParseConnectPacket(t *testing.T) {
 	reader := bytes.NewReader([]byte{
 		// connect packet
-		16, 31,
-		0, 6, 77, 81, 73, 115, 100, 112,
-		3, 2, 0, 60, 0, 17, 109, 111, 115,
-		113, 112, 117, 98, 124, 54, 56, 53, 52,
-		45, 116, 121, 116, 111,
+		16,   // connect + 0 flags
+		29,   // remaining length
+		0, 6, // protocol name length
+		77, 81, 73, 115, 100, 112, // "MQIsdp"
+		3,     // protocol level
+		2,     // connect flags (X clean session)
+		0, 60, // keepalive (60)
+		0, 15, // client id length
+		109, 111, 115, 113, 112, 117, 98, // mosqpub
+		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
 	})
 
 	streamer := NewStreamer(reader)
@@ -36,7 +41,7 @@ func TestStreamer_ParseConnectPacket(t *testing.T) {
 	cp := p.(*ConnectPacket)
 
 	assertIntEquals(t, 60, int(cp.KeepAlive))
-	assertStringEquals(t, "mosqpub|6854-tyto", cp.ClientId)
+	assertStringEquals(t, "mosqpub|9408-om", cp.ClientId)
 }
 
 func assertIntEquals(t *testing.T, expected int, actual int) {

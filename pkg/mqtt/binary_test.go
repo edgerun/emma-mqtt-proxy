@@ -116,26 +116,50 @@ func TestVariableByteUint32(t *testing.T) {
 	}
 }
 
-func TestName(t *testing.T) {
+func TestLengthEncodedString_WithNumbers(t *testing.T) {
 	slice := []byte{
-		0b00000000, // 0 (Length MSB)
-		0b00000100, // 4 (Length LSB)
-		0b01001101, // M
-		0b01010001, // Q
-		0b01010100, // T
-		0b01010100, // T
-		0b01010100, // T
-		0b01010001, // Q
+		0, 15, // length
+		109, 111, 115, 113, 112, 117, 98, // mosqpub
+		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
 	}
 
-	reader := bytes.NewReader(slice)
+	buf := bytes.NewBuffer(make([]byte, 512))
+	buf.Reset()
+	buf.Write(slice)
 
-	buf := bytes.NewBuffer(make([]byte, 20))
+	str, err := LengthEncodedString(buf)
+
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+
+	if str != "mosqpub|9408-om" {
+		t.Error("")
+	}
+
+}
+
+func TestPutLengthEncodedString_WithNumbers(t *testing.T) {
+	expected := []byte{
+		0, 15, // length
+		109, 111, 115, 113, 112, 117, 98, // mosqpub
+		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 512))
 	buf.Reset()
 
-	lr := io.LimitReader(reader, 6)
+	PutLengthEncodedString(buf, "mosqpub|9408-om")
 
-	n, _ := buf.ReadFrom(lr)
-	println("read", n, "bytes")
+	if buf.Len() != 17 {
+		t.Error("expected 17 bytes to be written, was", buf.Len())
+	}
 
+	actual := buf.Next(17)
+
+	for i, b := range actual {
+		if b != expected[i] {
+			t.Errorf("error at index %d: %d != %d", i, b, expected[i])
+		}
+	}
 }

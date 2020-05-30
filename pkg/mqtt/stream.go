@@ -95,64 +95,45 @@ func (s *Streamer) readPacket(header *PacketHeader) (Packet, error) {
 	switch header.Type {
 	case TypeConnect:
 		return s.readConnect(header)
+	case TypeConnAck:
+		return s.readConnAck(header)
 	default:
 		return nil, errors.New("unknown packet type " + PacketTypeName(header.Type))
-	}
-
-}
-
-func NewConnectFlags(b byte) ConnectFlags {
-	// TODO: deserialize flags
-	return ConnectFlags{
-		CleanSession: false,
-		WillFlag:     false,
-		WillQoS:      0,
-		WillRetain:   false,
-		PasswordFlag: false,
-		UserNameFlag: false,
 	}
 }
 
 func (s *Streamer) readConnect(header *PacketHeader) (packet *ConnectPacket, err error) {
-	packet = &ConnectPacket{}
-	packet.header = header
-
 	buf := s.buf // buffer contains the entire packet
+	packet, err = DecodeConnectPacket(buf)
 
-	// protocol name
-	packet.ProtocolName, err = LengthEncodedString(buf)
 	if err != nil {
 		return
 	}
+	if packet == nil {
+		panic("DecodeConnectPacket returned a nil pointer")
+	}
+	packet.header = header
+
 	switch packet.ProtocolName {
-	case "MQTT":
-	case "MQIsdp":
+	case "MQTT", "MQIsdp":
 		break
 	default:
 		err = errors.New("unknown protocol type " + packet.ProtocolName)
-		return
 	}
 
-	// protocol level
-	packet.ProtocolLevel, err = buf.ReadByte()
+	return
+}
+
+func (s *Streamer) readConnAck(header *PacketHeader) (packet *ConnAckPacket, err error) {
+	packet = &ConnAckPacket{}
+	packet.header = header
+
+	packet.Flags, err = s.buf.ReadByte()
 	if err != nil {
 		return
 	}
 
-	connectFlagByte, err := buf.ReadByte()
-	if err != nil {
-		return
-	}
-	packet.ConnectFlags = NewConnectFlags(connectFlagByte)
-
-	packet.KeepAlive = Uint16(buf)
-
-	if buf.Len() <= 0 {
-		return
-	}
-
-	// TODO: read rest of the connect packet
-	packet.ClientId, err = LengthEncodedString(buf)
+	packet.ReturnCode, err = s.buf.ReadByte()
 	if err != nil {
 		return
 	}

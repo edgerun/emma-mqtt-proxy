@@ -104,16 +104,18 @@ type ConnectPacket struct {
 	KeepAlive     uint16
 	ClientId      string
 	WillTopic     string
-	WillMessage   string
+	WillMessage   string // FIXME: should be a []byte field
 	UserName      string
 	Password      []byte
 }
 
-func (p *packet) Header() *PacketHeader {
-	return p.header
+type ConnAckPacket struct {
+	packet
+	Flags      byte
+	ReturnCode byte
 }
 
-func (p *ConnectPacket) Header() *PacketHeader {
+func (p *packet) Header() *PacketHeader {
 	return p.header
 }
 
@@ -121,4 +123,27 @@ func NewRawPacket(header PacketHeader) *RawPacket {
 	return &RawPacket{
 		Header: header,
 	}
+}
+
+func (h *PacketHeader) packetByteSize() int {
+	return int(h.Length) + h.byteSize()
+}
+
+func (h *PacketHeader) byteSize() int {
+	varInt := h.Length
+
+	if varInt <= 127 {
+		return 2
+	}
+	if varInt <= 16383 {
+		return 3
+	}
+	if varInt <= 2097151 {
+		return 4
+	}
+	if varInt <= 268435455 {
+		return 5
+	}
+
+	panic("Header too large")
 }
