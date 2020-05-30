@@ -21,6 +21,23 @@ func DecodeHeader(buf *bytes.Buffer) (h *PacketHeader, err error) {
 	return
 }
 
+func DecodeConnAckPacket(buf *bytes.Buffer) (p *ConnAckPacket, err error) {
+	p = &ConnAckPacket{}
+
+	ackFlags, err := buf.ReadByte()
+	if err != nil {
+		return
+	}
+	p.SessionPresent = (ackFlags & 0x1) > 0
+
+	p.ReturnCode, err = buf.ReadByte()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func DecodeConnectPacket(buf *bytes.Buffer) (p *ConnectPacket, err error) {
 	p = &ConnectPacket{}
 

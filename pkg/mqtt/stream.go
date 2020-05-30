@@ -147,18 +147,11 @@ func (s *Streamer) readConnect(header *PacketHeader) (packet *ConnectPacket, err
 }
 
 func (s *Streamer) readConnAck(header *PacketHeader) (packet *ConnAckPacket, err error) {
-	packet = &ConnAckPacket{}
+	packet, err = DecodeConnAckPacket(s.buf)
+	if packet == nil {
+		panic("DecodeConnectPacket returned a nil pointer")
+	}
+
 	packet.header = header
-
-	packet.Flags, err = s.buf.ReadByte()
-	if err != nil {
-		return
-	}
-
-	packet.ReturnCode, err = s.buf.ReadByte()
-	if err != nil {
-		return
-	}
-
 	return
 }

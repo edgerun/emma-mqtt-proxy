@@ -14,6 +14,9 @@ func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error
 	case TypeConnect:
 		err = EncodeConnectPacket(buf, p.(*ConnectPacket))
 		break
+	case TypeConnAck:
+		err = EncodeConnAckPacket(buf, p.(*ConnAckPacket))
+		break
 	default:
 		return errors.New(fmt.Sprintf("unknown packet type %d", packetType))
 	}
@@ -74,5 +77,17 @@ func encodeConnectFlags(buf *bytes.Buffer, p *ConnectPacket) (err error) {
 	}
 
 	buf.WriteByte(flags)
+	return
+}
+
+func EncodeConnAckPacket(buf *bytes.Buffer, p *ConnAckPacket) (err error) {
+	if p.SessionPresent {
+		buf.WriteByte(1)
+	} else {
+		buf.WriteByte(0)
+	}
+
+	buf.WriteByte(p.ReturnCode)
+
 	return
 }

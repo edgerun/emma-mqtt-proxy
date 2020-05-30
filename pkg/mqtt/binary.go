@@ -7,8 +7,8 @@ import (
 	"math"
 )
 
-const dMask = 0b01111111
-const cMask = 0b10000000
+const cMask = 0b10000000 // 128 -- mask for continuation bit in variable integer
+const dMask = 0b01111111 // 127 -- mask for data in variable integer
 
 func Uint16(buf *bytes.Buffer) uint16 {
 	return binary.BigEndian.Uint16(buf.Next(2))

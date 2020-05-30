@@ -107,8 +107,8 @@ type ConnectPacket struct {
 
 type ConnAckPacket struct {
 	packet
-	Flags      byte
-	ReturnCode byte
+	SessionPresent bool
+	ReturnCode     byte
 }
 
 func (p *packet) Header() *PacketHeader {
