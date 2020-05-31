@@ -1,4 +1,4 @@
-package main
+package proxy
 
 import (
 	"github.com/edgerun/emma-mqtt-proxy/pkg/mqtt"
@@ -86,8 +86,8 @@ func startProxyHandler(clientConn net.Conn) {
 	log.Println("breaking due to errors")
 }
 
-func main() {
-	ln, err := net.Listen("tcp", "127.0.0.1:1883")
+func Serve(network string, address string) {
+	ln, err := net.Listen(network, address)
 	if err != nil {
 		log.Fatal(err)
 	}
