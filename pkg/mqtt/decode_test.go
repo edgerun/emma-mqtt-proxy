@@ -12,9 +12,26 @@ func TestDecodePublishPacket(t *testing.T) {
 		0, 4, // Topic length
 		116, 101, 115, 116, // Topic (test)
 		116, 101, 115, 116, // Payload (test),
+		1, 1, 1, // superfluous bytes to verify packet is processed correctly
 	}
 
-	println(input) // TODO
+	buf := bytes.NewBuffer(input)
+
+	header, err := DecodeHeader(buf)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	packet, err := DecodePublishPacket(buf, header)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+
+	if packet.TopicName != "test" {
+		t.Error("unexpected topic name", packet.TopicName)
+	}
+	if string(packet.Payload) != "test" {
+		t.Error("unexpected payload string", string(packet.Payload))
+	}
 }
 
 func TestDecodeConnectPacket(t *testing.T) {

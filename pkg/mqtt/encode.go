@@ -17,6 +17,9 @@ func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error
 	case TypeConnAck:
 		err = EncodeConnAckPacket(buf, p.(*ConnAckPacket))
 		break
+	case TypePublish:
+		err = EncodePublishPacket(buf, p.(*PublishPacket))
+		break
 	case TypePingReq, TypePingResp:
 		break
 	default:
@@ -90,6 +93,24 @@ func EncodeConnAckPacket(buf *bytes.Buffer, p *ConnAckPacket) (err error) {
 	}
 
 	buf.WriteByte(p.ReturnCode)
+
+	return
+}
+
+func EncodePublishPacket(buf *bytes.Buffer, p *PublishPacket) (err error) {
+	// FIXME: here a limitation of the current structure becomes obvious: we need to know about the packet, but encode the header first ...
+	// fixed header flags
+	//p.header.Flags = 0
+	//if p.Retain {
+	//	p.header.Flags |= 0x1
+	//}
+	//p.header.Flags |= p.QoS << 1
+	//if p.Dup {
+	//	p.header.Flags |= 0x8
+	//}
+
+	PutLengthEncodedString(buf, p.TopicName)
+	buf.Write(p.Payload)
 
 	return
 }

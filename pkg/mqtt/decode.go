@@ -75,9 +75,40 @@ func DecodeConnectFlags(b byte) ConnectFlags {
 	return ConnectFlags{
 		CleanSession: (b & 0x2) == 0x2,
 		WillFlag:     (b & 0x4) == 0x4,
-		WillQoS:      b & 0x18, // 0b00011000
+		WillQoS:      (b & 0x18) >> 3, // 0b00011000
 		WillRetain:   (b & 0x20) == 0x20,
 		PasswordFlag: (b & 0x40) == 0x40,
 		UserNameFlag: (b & 0x80) == 0x80,
 	}
+}
+
+func DecodePublishPacket(buf *bytes.Buffer, header *PacketHeader) (p *PublishPacket, err error) {
+	p = &PublishPacket{}
+
+	p.Dup = (header.Flags & 0b1000) > 0
+	p.QoS = (header.Flags & 0b0110) >> 1
+	p.Retain = (header.Flags & 0b0001) > 0
+
+	varHeaderLen := 0
+	p.TopicName, err = LengthEncodedString(buf)
+	if err != nil {
+		return
+	}
+	varHeaderLen += len(p.TopicName) + 2 // length encoded string field length
+	if p.QoS > QoS0 {
+		p.PacketId = Uint16(buf)
+		varHeaderLen += 2
+	}
+
+	// copy the remaining length of the packet into the payload buffer
+	remLen := int(header.Length) - varHeaderLen
+	if remLen > 0 {
+		p.Payload = make([]byte, remLen)
+		_, err = buf.Read(p.Payload)
+		if err != nil {
+			return
+		}
+	}
+
+	return
 }

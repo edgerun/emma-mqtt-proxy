@@ -48,3 +48,38 @@ func TestEncodeConnectPacket(t *testing.T) {
 	}
 
 }
+
+func TestEncodePublishPacket(t *testing.T) {
+	expected := []byte{
+		// a publish packet
+		//48, 10, // Header (publish)
+		0, 4, // Topic length
+		116, 101, 115, 116, // Topic (test)
+		116, 101, 115, 116, // Payload (test),
+	}
+
+	p := &PublishPacket{
+		TopicName:  "test",
+		Payload: []byte("test"),
+	}
+	buf := bytes.NewBuffer(make([]byte, 4096))
+	buf.Reset()
+
+	err := EncodePacket(buf, p, TypePublish)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	if buf.Len() != 10 {
+		t.Error("unexpected encoded length", buf.Len())
+	}
+
+	actual := buf.Next(len(expected))
+
+	for i, b := range expected {
+		if b != actual[i] {
+			t.Errorf("unexpected value at index %d, %d != %d", i, actual[i], b)
+		}
+	}
+
+
+}

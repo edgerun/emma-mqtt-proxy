@@ -119,6 +119,8 @@ func (s *Streamer) readPacket(header *PacketHeader) (Packet, error) {
 		return s.readConnect(header)
 	case TypeConnAck:
 		return s.readConnAck(header)
+	case TypePublish:
+		return s.readPublish(header)
 	case TypePingReq:
 		return s.readPingReq(header)
 	case TypePingResp:
@@ -159,6 +161,17 @@ func (s *Streamer) readConnAck(header *PacketHeader) (packet *ConnAckPacket, err
 	packet.header = header
 	return
 }
+
+func (s *Streamer) readPublish(header *PacketHeader) (packet *PublishPacket, err error) {
+	packet, err = DecodePublishPacket(s.buf, header)
+	if packet == nil {
+		panic("DecodeConnectPacket returned a nil pointer")
+	}
+
+	packet.header = header
+	return
+}
+
 func (s *Streamer) readPingResp(header *PacketHeader) (packet *PingRespPacket, err error) {
 	packet = &PingRespPacket{}
 	packet.header = header

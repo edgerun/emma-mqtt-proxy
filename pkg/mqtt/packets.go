@@ -6,9 +6,9 @@ type QoS = byte
 const MaxPacketSize = 268435455 // packet size is stored in a variable byte integer with max 4 bytes: (2^(7*4)) - 1
 
 const (
-	QoS1 QoS = 0
-	QoS2 QoS = 1
-	QoS3 QoS = 2
+	QoS0 QoS = 0
+	QoS1 QoS = 1
+	QoS2 QoS = 2
 )
 
 const (
@@ -83,6 +83,14 @@ type packet struct {
 	header *PacketHeader
 }
 
+func (p *packet) Header() *PacketHeader {
+	return p.header
+}
+
+func (p *packet) Type() PacketType {
+	return p.header.Type
+}
+
 type ConnectFlags struct {
 	CleanSession bool
 	WillFlag     bool
@@ -119,12 +127,16 @@ type PingRespPacket struct {
 	packet
 }
 
-func (p *packet) Header() *PacketHeader {
-	return p.header
-}
-
-func (p *packet) Type() PacketType {
-	return p.header.Type
+type PublishPacket struct {
+	packet
+	// unmarshalled static header flags
+	Dup    bool
+	QoS    QoS
+	Retain bool
+	// variable header + payload
+	TopicName string
+	PacketId  uint16
+	Payload   []byte
 }
 
 func (h *PacketHeader) packetByteSize() int {
