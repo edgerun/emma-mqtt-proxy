@@ -98,7 +98,7 @@ func (s *Streamer) Next() bool {
 	s.buf.Reset()
 	s.limR.N = int64(header.Length)
 	s.buf.Grow(int(header.Length))  // make sure we have enough space
-	_, err = s.buf.ReadFrom(s.limR) // read packet data into buffer TODO: what happens on partial reads?
+	_, err = s.buf.ReadFrom(s.limR) // read packet data into buffer
 	if err != nil {
 		return s.bail(err)
 	}
@@ -121,6 +121,10 @@ func (s *Streamer) readPacket(header *PacketHeader) (Packet, error) {
 		return s.readConnAck(header)
 	case TypePublish:
 		return s.readPublish(header)
+	case TypeSubscribe:
+		return s.readSubscribe(header)
+	case TypeSubAck:
+		return s.readSubAck(header)
 	case TypePingReq:
 		return s.readPingReq(header)
 	case TypePingResp:
@@ -168,6 +172,23 @@ func (s *Streamer) readPublish(header *PacketHeader) (packet *PublishPacket, err
 		panic("DecodeConnectPacket returned a nil pointer")
 	}
 
+	packet.header = header
+	return
+}
+
+func (s *Streamer) readSubscribe(header *PacketHeader) (packet *SubscribePacket, err error) {
+	packet, err = DecodeSubscribePacket(s.buf)
+	if packet == nil {
+		panic("DecodeSubscribePacket returned a nil pointer")
+	}
+	packet.header = header
+	return
+}
+func (s *Streamer) readSubAck(header *PacketHeader) (packet *SubAckPacket, err error) {
+	packet, err = DecodeSubAckPacket(s.buf)
+	if packet == nil {
+		panic("DecodeSubscribePacket returned a nil pointer")
+	}
 	packet.header = header
 	return
 }

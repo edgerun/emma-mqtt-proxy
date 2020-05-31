@@ -92,3 +92,61 @@ func TestDecodeConnectPacket(t *testing.T) {
 	}
 
 }
+
+func TestDecodeSubscribePacket(t *testing.T) {
+	reader := bytes.NewReader([]byte{
+		// subscribe packet
+		130, // subscribe + 0010
+		14,  // remaining length
+		// variable header
+		0, 42, // packet ID
+		// ## payload
+		// ### topic filter "a/b"
+		0, 3, // length
+		0x61, 0x2F, 0x62, // a/b
+		// ### topic filter "c/d"
+		1,    // request QoS (1)
+		0, 3, // length
+		0x63, 0x2F, 0x64, // c/d
+		2, // request QoS (2)
+	})
+
+	buf := bytes.NewBuffer(make([]byte, 4096))
+	buf.Reset()
+	buf.ReadFrom(reader)
+
+	header, err := DecodeHeader(buf)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+	if header.Type != TypeSubscribe {
+		t.Error("unexpected packet type", header.Type)
+	}
+
+	packet, err := DecodeSubscribePacket(buf)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+
+	if packet.PacketId != 42 {
+		t.Error("unexpected packet id", packet.PacketId)
+	}
+	if len(packet.Subscriptions) != 2 {
+		t.Error("unexpected number of subscriptions", len(packet.Subscriptions))
+	}
+
+	if packet.Subscriptions[0].TopicFilter != "a/b" {
+		t.Error("unexpected topic filter", packet.Subscriptions[0].TopicFilter)
+	}
+	if packet.Subscriptions[0].QoS != QoS1 {
+		t.Error("unexpected QoS level", packet.Subscriptions[0].QoS)
+	}
+
+	if packet.Subscriptions[1].TopicFilter != "c/d" {
+		t.Error("unexpected topic filter", packet.Subscriptions[1].TopicFilter)
+	}
+	if packet.Subscriptions[1].QoS != QoS2 {
+		t.Error("unexpected QoS level", packet.Subscriptions[1].QoS)
+	}
+
+}

@@ -20,6 +20,12 @@ func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error
 	case TypePublish:
 		err = EncodePublishPacket(buf, p.(*PublishPacket))
 		break
+	case TypeSubscribe:
+		err = EncodeSubscribePacket(buf, p.(*SubscribePacket))
+		break
+	case TypeSubAck:
+		err = EncodeSubAckPacket(buf, p.(*SubAckPacket))
+		break
 	case TypePingReq, TypePingResp:
 		break
 	default:
@@ -111,6 +117,27 @@ func EncodePublishPacket(buf *bytes.Buffer, p *PublishPacket) (err error) {
 
 	PutLengthEncodedString(buf, p.TopicName)
 	buf.Write(p.Payload)
+
+	return
+}
+
+func EncodeSubscribePacket(buf *bytes.Buffer, p *SubscribePacket) (err error) {
+	PutUint16(buf, p.PacketId)
+
+	for _, sub := range p.Subscriptions {
+		PutLengthEncodedString(buf, sub.TopicFilter)
+		buf.WriteByte(sub.QoS)
+	}
+
+	return
+}
+
+func EncodeSubAckPacket(buf *bytes.Buffer, p *SubAckPacket) (err error) {
+	PutUint16(buf, p.PacketId)
+
+	for _, code := range p.ReturnCodes {
+		buf.WriteByte(code & 0b10000011)
+	}
 
 	return
 }

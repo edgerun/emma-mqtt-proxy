@@ -2,13 +2,21 @@ package mqtt
 
 type PacketType = uint8 // uint4
 type QoS = byte
+type SubAckCode = byte
 
 const MaxPacketSize = 268435455 // packet size is stored in a variable byte integer with max 4 bytes: (2^(7*4)) - 1
 
 const (
-	QoS0 QoS = 0
-	QoS1 QoS = 1
-	QoS2 QoS = 2
+	QoS0 QoS = 0x00
+	QoS1 QoS = 0x01
+	QoS2 QoS = 0x02
+)
+
+const (
+	MaxQoS0 SubAckCode = 0x00
+	MaxQoS1 SubAckCode = 0x01
+	MaxQoS2 SubAckCode = 0x02
+	Failure SubAckCode = 0x80
 )
 
 const (
@@ -137,6 +145,23 @@ type PublishPacket struct {
 	TopicName string
 	PacketId  uint16
 	Payload   []byte
+}
+
+type Subscription struct {
+	TopicFilter string
+	QoS         QoS
+}
+
+type SubscribePacket struct {
+	packet
+	PacketId      uint16
+	Subscriptions []Subscription
+}
+
+type SubAckPacket struct {
+	packet
+	PacketId    uint16
+	ReturnCodes []SubAckCode
 }
 
 func (h *PacketHeader) packetByteSize() int {

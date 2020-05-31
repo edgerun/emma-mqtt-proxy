@@ -112,3 +112,60 @@ func DecodePublishPacket(buf *bytes.Buffer, header *PacketHeader) (p *PublishPac
 
 	return
 }
+
+func decodeSubscription(buf *bytes.Buffer) (s Subscription, err error) {
+	s = Subscription{}
+
+	s.TopicFilter, err = LengthEncodedString(buf)
+	if err != nil {
+		return
+	}
+	qosByte, err := buf.ReadByte()
+	if err != nil {
+		return
+	}
+	s.QoS = qosByte & 0b00000011
+
+	return
+}
+
+func DecodeSubscribePacket(buf *bytes.Buffer) (p *SubscribePacket, err error) {
+	p = &SubscribePacket{}
+
+	p.PacketId = Uint16(buf)
+
+	var subs []Subscription
+
+	// FIXME: read number of bytes specified in the header
+	for buf.Len() > 0 {
+		var sub Subscription
+		sub, err = decodeSubscription(buf)
+		if err != nil {
+			return
+		}
+		subs = append(subs, sub)
+	}
+
+	p.Subscriptions = subs
+
+	return
+}
+
+func DecodeSubAckPacket(buf *bytes.Buffer) (p *SubAckPacket, err error) {
+	p = &SubAckPacket{}
+
+	p.PacketId = Uint16(buf)
+
+	// FIXME: read number of bytes specified in the header
+	n := buf.Len()
+	var codes = make([]SubAckCode, n)
+
+	_, err = buf.Read(codes)
+	if err != nil {
+		return
+	}
+
+	p.ReturnCodes = codes
+
+	return
+}
