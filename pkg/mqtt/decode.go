@@ -1,10 +1,37 @@
 package mqtt
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+	"fmt"
+)
 
-func DecodeHeader(buf *bytes.Buffer) (h *PacketHeader, err error) {
-	h = &PacketHeader{}
+func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
+	switch h.Type {
+	case TypeConnect:
+		p, err = DecodeConnectPacket(buf)
+	case TypeConnAck:
+		p, err = DecodeConnAckPacket(buf)
+	case TypePublish:
+		p, err = DecodePublishPacket(buf, h)
+	case TypeSubscribe:
+		p, err = DecodeSubscribePacket(buf)
+	case TypeSubAck:
+		p, err = DecodeSubAckPacket(buf)
+	case TypePingReq:
+		p, err = DecodePingReqPacket(buf)
+	case TypePingResp:
+		p, err = DecodePingRespPacket(buf)
+	default:
+		return nil, errors.New(fmt.Sprintf("unknown packet type %d", h.Type))
+	}
 
+	p.setHeader(h)
+
+	return p, err
+}
+
+func DecodeHeader(buf *bytes.Buffer, h *PacketHeader) (err error) {
 	typeAndFlags, err := buf.ReadByte()
 	if err != nil {
 		return
@@ -42,6 +69,14 @@ func DecodeConnectPacket(buf *bytes.Buffer) (p *ConnectPacket, err error) {
 	p = &ConnectPacket{}
 
 	p.ProtocolName, err = LengthEncodedString(buf)
+
+	switch p.ProtocolName {
+	case "MQTT", "MQIsdp":
+		break
+	default:
+		err = errors.New("unknown protocol type " + p.ProtocolName)
+		return
+	}
 
 	// protocol level
 	p.ProtocolLevel, err = buf.ReadByte()
@@ -167,5 +202,15 @@ func DecodeSubAckPacket(buf *bytes.Buffer) (p *SubAckPacket, err error) {
 
 	p.ReturnCodes = codes
 
+	return
+}
+
+func DecodePingRespPacket(buf *bytes.Buffer) (packet *PingRespPacket, err error) {
+	packet = &PingRespPacket{}
+	return
+}
+
+func DecodePingReqPacket(buf *bytes.Buffer) (packet *PingReqPacket, err error) {
+	packet = &PingReqPacket{}
 	return
 }

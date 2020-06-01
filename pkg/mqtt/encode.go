@@ -12,31 +12,20 @@ import (
 func EncodePacket(buf *bytes.Buffer, p Packet) (err error) {
 	switch p.Type() {
 	case TypeConnect:
-		err = EncodeConnectPacket(buf, p.(*ConnectPacket))
-		break
+		return EncodeConnectPacket(buf, p.(*ConnectPacket))
 	case TypeConnAck:
-		err = EncodeConnAckPacket(buf, p.(*ConnAckPacket))
-		break
+		return EncodeConnAckPacket(buf, p.(*ConnAckPacket))
 	case TypePublish:
-		err = EncodePublishPacket(buf, p.(*PublishPacket))
-		break
+		return EncodePublishPacket(buf, p.(*PublishPacket))
 	case TypeSubscribe:
-		err = EncodeSubscribePacket(buf, p.(*SubscribePacket))
-		break
+		return EncodeSubscribePacket(buf, p.(*SubscribePacket))
 	case TypeSubAck:
-		err = EncodeSubAckPacket(buf, p.(*SubAckPacket))
-		break
+		return EncodeSubAckPacket(buf, p.(*SubAckPacket))
 	case TypePingReq, TypePingResp:
-		break
+		return
 	default:
 		return errors.New(fmt.Sprintf("unknown packet type %d", p.Type()))
 	}
-
-	if err != nil {
-		return err
-	}
-
-	return
 }
 
 func EncodeHeader(buf *bytes.Buffer, h *PacketHeader) (err error) {

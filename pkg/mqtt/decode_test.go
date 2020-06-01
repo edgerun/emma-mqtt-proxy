@@ -16,8 +16,9 @@ func TestDecodePublishPacket(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(input)
+	header := &PacketHeader{}
 
-	header, err := DecodeHeader(buf)
+	err := DecodeHeader(buf, header)
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
@@ -57,13 +58,10 @@ func TestDecodeConnectPacket(t *testing.T) {
 		t.Error("unexpected error", err)
 	}
 
-	h, err := DecodeHeader(buf)
+	h:= &PacketHeader{}
+	err = DecodeHeader(buf, h)
 	if err != nil {
 		t.Error("unexpected error", err)
-	}
-	if h == nil {
-		t.Error("decode header returned nil")
-		return
 	}
 	if h.Length != 29 {
 		t.Error("Unexpected remaining length", h.Length)
@@ -115,7 +113,8 @@ func TestDecodeSubscribePacket(t *testing.T) {
 	buf.Reset()
 	buf.ReadFrom(reader)
 
-	header, err := DecodeHeader(buf)
+	header := &PacketHeader{}
+	err := DecodeHeader(buf, header)
 	if err != nil {
 		t.Error("unexpected error", err)
 	}

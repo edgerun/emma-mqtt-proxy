@@ -73,7 +73,9 @@ func readHeaderFrom(r io.Reader) (h *PacketHeader, err error) {
 		}
 	}
 
-	return DecodeHeader(bytes.NewBuffer(buf))
+	h = &PacketHeader{}
+	err = DecodeHeader(bytes.NewBuffer(buf), h)
+	return
 }
 
 func (s *Streamer) Next() bool {
@@ -91,21 +93,8 @@ func (s *Streamer) Next() bool {
 
 	// TODO: apply filters and potentially drop packet, or skip decoding and copy data directly
 
-	// prepare limited reader
-	if s.buf.Len() != 0 {
-		panic(fmt.Sprintf("packet buffer should be empty, was %d", s.buf.Len()))
-	}
-	s.buf.Reset()
-	s.limR.N = int64(header.Length)
-	s.buf.Grow(int(header.Length))  // make sure we have enough space
-	_, err = s.buf.ReadFrom(s.limR) // read packet data into buffer
-	if err != nil {
-		return s.bail(err)
-	}
-
-	// unmarshal packet
-	packet, err := s.readPacket(header)
-	s.packet = packet
+	// read the packet
+	s.packet, err = s.readPacket(header)
 	if err != nil {
 		return s.bail(err)
 	}
@@ -113,94 +102,27 @@ func (s *Streamer) Next() bool {
 	return true
 }
 
-func (s *Streamer) readPacket(header *PacketHeader) (Packet, error) {
-	switch header.Type {
-	case TypeConnect:
-		return s.readConnect(header)
-	case TypeConnAck:
-		return s.readConnAck(header)
-	case TypePublish:
-		return s.readPublish(header)
-	case TypeSubscribe:
-		return s.readSubscribe(header)
-	case TypeSubAck:
-		return s.readSubAck(header)
-	case TypePingReq:
-		return s.readPingReq(header)
-	case TypePingResp:
-		return s.readPingResp(header)
-	default:
-		return nil, errors.New("unknown packet type " + PacketTypeName(header.Type))
+func (s *Streamer) readPacket(header *PacketHeader) (p Packet, err error) {
+	// prepare limited reader to read the packet length exactly from the underlying reader
+	if s.buf.Len() != 0 {
+		panic(fmt.Sprintf("packet buffer should be empty, was %d", s.buf.Len()))
 	}
-}
+	s.limR.N = int64(header.Length)
 
-func (s *Streamer) readConnect(header *PacketHeader) (packet *ConnectPacket, err error) {
-	buf := s.buf // buffer contains the entire packet
-	packet, err = DecodeConnectPacket(buf)
+	// prepare buffer to read into
+	s.buf.Reset()
+	s.buf.Grow(int(header.Length))  // make sure we have enough space
 
+	// read packet data into buffer
+	_, err = s.buf.ReadFrom(s.limR)
 	if err != nil {
 		return
 	}
-	if packet == nil {
-		panic("DecodeConnectPacket returned a nil pointer")
+
+	// unmarshal packet into buffer (we've ensured that s.buf is exactly the remaining length of the MQTT packet)
+	p, err = DecodePacket(s.buf, header)
+	if err != nil {
+		return
 	}
-	packet.header = header
-
-	switch packet.ProtocolName {
-	case "MQTT", "MQIsdp":
-		break
-	default:
-		err = errors.New("unknown protocol type " + packet.ProtocolName)
-	}
-
-	return
-}
-
-func (s *Streamer) readConnAck(header *PacketHeader) (packet *ConnAckPacket, err error) {
-	packet, err = DecodeConnAckPacket(s.buf)
-	if packet == nil {
-		panic("DecodeConnectPacket returned a nil pointer")
-	}
-
-	packet.header = header
-	return
-}
-
-func (s *Streamer) readPublish(header *PacketHeader) (packet *PublishPacket, err error) {
-	packet, err = DecodePublishPacket(s.buf, header)
-	if packet == nil {
-		panic("DecodeConnectPacket returned a nil pointer")
-	}
-
-	packet.header = header
-	return
-}
-
-func (s *Streamer) readSubscribe(header *PacketHeader) (packet *SubscribePacket, err error) {
-	packet, err = DecodeSubscribePacket(s.buf)
-	if packet == nil {
-		panic("DecodeSubscribePacket returned a nil pointer")
-	}
-	packet.header = header
-	return
-}
-func (s *Streamer) readSubAck(header *PacketHeader) (packet *SubAckPacket, err error) {
-	packet, err = DecodeSubAckPacket(s.buf)
-	if packet == nil {
-		panic("DecodeSubscribePacket returned a nil pointer")
-	}
-	packet.header = header
-	return
-}
-
-func (s *Streamer) readPingResp(header *PacketHeader) (packet *PingRespPacket, err error) {
-	packet = &PingRespPacket{}
-	packet.header = header
-	return
-}
-
-func (s *Streamer) readPingReq(header *PacketHeader) (packet *PingReqPacket, err error) {
-	packet = &PingReqPacket{}
-	packet.header = header
 	return
 }

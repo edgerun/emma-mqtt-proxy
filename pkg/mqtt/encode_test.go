@@ -59,8 +59,8 @@ func TestEncodePublishPacket(t *testing.T) {
 	}
 
 	p := &PublishPacket{
-		TopicName:  "test",
-		Payload: []byte("test"),
+		TopicName: "test",
+		Payload:   []byte("test"),
 	}
 	buf := bytes.NewBuffer(make([]byte, 4096))
 	buf.Reset()
@@ -80,6 +80,5 @@ func TestEncodePublishPacket(t *testing.T) {
 			t.Errorf("unexpected value at index %d, %d != %d", i, actual[i], b)
 		}
 	}
-
 
 }
