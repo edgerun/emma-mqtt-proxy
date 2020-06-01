@@ -9,8 +9,8 @@ import (
 // TODO: proper error handling
 
 // Writes the packet into the buffer, but without the header.
-func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error) {
-	switch packetType {
+func EncodePacket(buf *bytes.Buffer, p Packet) (err error) {
+	switch p.Type() {
 	case TypeConnect:
 		err = EncodeConnectPacket(buf, p.(*ConnectPacket))
 		break
@@ -29,7 +29,7 @@ func EncodePacket(buf *bytes.Buffer, p Packet, packetType PacketType) (err error
 	case TypePingReq, TypePingResp:
 		break
 	default:
-		return errors.New(fmt.Sprintf("unknown packet type %d", packetType))
+		return errors.New(fmt.Sprintf("unknown packet type %d", p.Type()))
 	}
 
 	if err != nil {
@@ -104,17 +104,6 @@ func EncodeConnAckPacket(buf *bytes.Buffer, p *ConnAckPacket) (err error) {
 }
 
 func EncodePublishPacket(buf *bytes.Buffer, p *PublishPacket) (err error) {
-	// FIXME: here a limitation of the current structure becomes obvious: we need to know about the packet, but encode the header first ...
-	// fixed header flags
-	//p.header.Flags = 0
-	//if p.Retain {
-	//	p.header.Flags |= 0x1
-	//}
-	//p.header.Flags |= p.QoS << 1
-	//if p.Dup {
-	//	p.header.Flags |= 0x8
-	//}
-
 	PutLengthEncodedString(buf, p.TopicName)
 	buf.Write(p.Payload)
 

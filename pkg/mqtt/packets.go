@@ -67,15 +67,20 @@ func PacketTypeName(packetType PacketType) string {
 
 type Flags = uint8 // uint4
 
-// +-----------------------------------+
-// |   | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-// +-----------------------------------+
-// | 0 |  PACKET TYPE  |     FLAGS     |
-// +-----------------------------------+
-// | 1 | 1     VARIABLE LENGTH INT     | MSB is the 'continuation bit', and the 7 LSB contain the next bits of the int.
-// | 2 | 1            ...              | 0 in the MSG indicates that the variable length int is done. The maximum number
-// |...| 0            ...              | of bytes in the Variable Byte Integer field is four: so 4*7 bit = max 28 bit
-// +-----------------------------------+
+// The fixed header of an MQTT protocol holds the packet type, fixed packet-specific flags, and the remaining length
+// in bytes of the packet encoded in a max 4 byte encoded variable integer.
+// The structure is as follows:
+//     +-----------------------------------+
+//     |   | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+//     +-----------------------------------+
+//     | 0 |  PACKET TYPE  |     FLAGS     |
+//     +-----------------------------------+
+//     | 1 | 1     VARIABLE LENGTH INT     | MSB is the 'continuation bit', and the 7 LSB contain the next bits of the int.
+//     | 2 | 1            ...              | 0 in the MSG indicates that the variable length int is done. The maximum number
+//     |...| 0            ...              | of bytes in the Variable Byte Integer field is four: so 4*7 bit = max 28 bit
+//     +-----------------------------------+
+//
+// After a packet has been deserialized, the value of Length becomes meaningless, as it can change once
 type PacketHeader struct {
 	Type   PacketType
 	Flags  Flags
@@ -83,33 +88,29 @@ type PacketHeader struct {
 }
 
 type Packet interface {
+	// Type returns the constant identifying this particular packet's type.
 	Type() PacketType
+	// Returns the static header flags. This is 0 in most cases.
+	Flags() Flags
+
 	Header() *PacketHeader
+	setHeader(header *PacketHeader)
 }
 
-type packet struct {
+type headerContainer struct {
 	header *PacketHeader
 }
 
-func (p *packet) Header() *PacketHeader {
+func (p *headerContainer) Header() *PacketHeader {
 	return p.header
 }
 
-func (p *packet) Type() PacketType {
-	return p.header.Type
-}
-
-type ConnectFlags struct {
-	CleanSession bool
-	WillFlag     bool
-	WillQoS      QoS
-	WillRetain   bool
-	PasswordFlag bool
-	UserNameFlag bool
+func (p *headerContainer) setHeader(header *PacketHeader) {
+	p.header = header
 }
 
 type ConnectPacket struct {
-	packet
+	headerContainer
 	ConnectFlags
 	ProtocolName  string
 	ProtocolLevel uint8
@@ -121,22 +122,63 @@ type ConnectPacket struct {
 	Password      []byte
 }
 
+type ConnectFlags struct {
+	CleanSession bool
+	WillFlag     bool
+	WillQoS      QoS
+	WillRetain   bool
+	PasswordFlag bool
+	UserNameFlag bool
+}
+
+func (*ConnectPacket) Type() PacketType {
+	return TypeConnect
+}
+
+func (*ConnectPacket) Flags() Flags {
+	return 0
+}
+
 type ConnAckPacket struct {
-	packet
+	headerContainer
 	SessionPresent bool
 	ReturnCode     byte
 }
 
+func (*ConnAckPacket) Type() PacketType {
+	return TypeConnAck
+}
+
+func (*ConnAckPacket) Flags() Flags {
+	return 0
+}
+
 type PingReqPacket struct {
-	packet
+	headerContainer
+}
+
+func (*PingReqPacket) Type() PacketType {
+	return TypePingReq
+}
+
+func (*PingReqPacket) Flags() Flags {
+	return 0
 }
 
 type PingRespPacket struct {
-	packet
+	headerContainer
+}
+
+func (*PingRespPacket) Type() PacketType {
+	return TypePingResp
+}
+
+func (*PingRespPacket) Flags() Flags {
+	return 0
 }
 
 type PublishPacket struct {
-	packet
+	headerContainer
 	// unmarshalled static header flags
 	Dup    bool
 	QoS    QoS
@@ -147,42 +189,59 @@ type PublishPacket struct {
 	Payload   []byte
 }
 
+func (*PublishPacket) Type() PacketType {
+	return TypePublish
+}
+
+// Fixed header flags for the publish packet:
+//
+//     +--------+--------+--------+--------+
+//     | 0      | 1      | 2      | 3      |
+//     +--------+-----------------+--------+
+//     | DUP    |       QoS       | RETAIN |
+//     +--------+-----------------+--------+
+func (p *PublishPacket) Flags() (flags Flags) {
+
+	flags = 0
+	if p.Retain {
+		flags |= 0x1
+	}
+	flags |= p.QoS << 1
+	if p.Dup {
+		flags |= 0x8
+	}
+	return
+}
+
+type SubscribePacket struct {
+	headerContainer
+	PacketId      uint16
+	Subscriptions []Subscription
+}
+
 type Subscription struct {
 	TopicFilter string
 	QoS         QoS
 }
 
-type SubscribePacket struct {
-	packet
-	PacketId      uint16
-	Subscriptions []Subscription
+func (*SubscribePacket) Type() PacketType {
+	return TypeSubscribe
+}
+
+func (*SubscribePacket) Flags() Flags {
+	return 0
 }
 
 type SubAckPacket struct {
-	packet
+	headerContainer
 	PacketId    uint16
 	ReturnCodes []SubAckCode
 }
 
-func (h *PacketHeader) packetByteSize() int {
-	return int(h.Length) + h.byteSize()
+func (*SubAckPacket) Type() PacketType {
+	return TypeSubAck
 }
 
-func (h *PacketHeader) byteSize() int {
-	varInt := h.Length
-
-	if varInt <= 127 {
-		return 2
-	}
-	if varInt <= 16383 {
-		return 3
-	}
-	if varInt <= 2097151 {
-		return 4
-	}
-	if varInt <= 268435455 {
-		return 5
-	}
-
-	panic("header too large")
+func (*SubAckPacket) Flags() Flags {
+	return 0
 }

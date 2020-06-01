@@ -31,7 +31,7 @@ func TestEncodeConnectPacket(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 4096))
 	buf.Reset()
 
-	err := EncodePacket(buf, p, TypeConnect)
+	err := EncodePacket(buf, p)
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
@@ -65,7 +65,7 @@ func TestEncodePublishPacket(t *testing.T) {
 	buf := bytes.NewBuffer(make([]byte, 4096))
 	buf.Reset()
 
-	err := EncodePacket(buf, p, TypePublish)
+	err := EncodePacket(buf, p)
 	if err != nil {
 		t.Error("unexpected error", err)
 	}
