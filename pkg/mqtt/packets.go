@@ -1,6 +1,6 @@
 package mqtt
 
-type PacketType = uint8 // uint4
+type PacketType uint8 // uint4
 type QoS = byte
 type SubAckCode = byte
 
@@ -60,9 +60,13 @@ var packetTypeNames = map[PacketType]string{
 func PacketTypeName(packetType PacketType) string {
 	v, ok := packetTypeNames[packetType]
 	if !ok {
-		return "UNKNOWN"
+		panic("invalid packet type")
 	}
 	return v
+}
+
+func (t PacketType) String() string {
+	return PacketTypeName(t)
 }
 
 type Flags = uint8 // uint4
