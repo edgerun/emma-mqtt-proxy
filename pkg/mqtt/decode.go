@@ -36,7 +36,7 @@ func DecodeHeader(buf *bytes.Buffer, h *PacketHeader) (err error) {
 	if err != nil {
 		return
 	}
-	h.Type = typeAndFlags >> 4
+	h.Type = PacketType(typeAndFlags >> 4)
 	h.Flags = typeAndFlags & 0b00001111
 
 	length, err := VariableByteUint32(buf)

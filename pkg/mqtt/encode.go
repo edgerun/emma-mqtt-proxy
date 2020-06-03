@@ -29,7 +29,7 @@ func EncodePacket(buf *bytes.Buffer, p Packet) (err error) {
 }
 
 func EncodeHeader(buf *bytes.Buffer, h *PacketHeader) (err error) {
-	buf.WriteByte((h.Type << 4) | h.Flags)
+	buf.WriteByte((byte(h.Type) << 4) | h.Flags)
 	PutVariableByteUint32(buf, h.Length)
 	return
 }
