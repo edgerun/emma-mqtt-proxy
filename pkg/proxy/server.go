@@ -6,43 +6,6 @@ import (
 	"net"
 )
 
-func readPackets(conn net.Conn, packets chan mqtt.Packet) {
-	streamer := mqtt.NewStreamer(conn)
-
-	log.Printf("reading packets from [%s]...\n", conn.RemoteAddr())
-	for streamer.Next() {
-		if streamer.Err() != nil {
-			log.Printf("[%s] error while reading packet stream: %s\n", conn.RemoteAddr(), streamer.Err())
-			break
-		}
-
-		packet := streamer.Packet()
-		log.Printf("[%s] sent packet: %s\n", conn.RemoteAddr(), mqtt.PacketTypeName(packet.Type()))
-		packets <- packet
-	}
-
-	if streamer.Err() != nil {
-		log.Println("error while reading packet stream", streamer.Err())
-	}
-
-	log.Println("Exitting packet streamer")
-}
-
-func sendPackets(packets chan mqtt.Packet, conn net.Conn) (err error) {
-	w := mqtt.NewWriter(conn)
-	var n int64
-
-	for packet := range packets {
-		n, err = w.Write(packet)
-		log.Printf("wrote %d bytes to [%s]\n", n, conn.RemoteAddr())
-
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
 func startProxyHandler(clientConn net.Conn) {
 	defer clientConn.Close()
 
@@ -55,35 +18,37 @@ func startProxyHandler(clientConn net.Conn) {
 
 	clientPackets := make(chan mqtt.Packet)
 	brokerPackets := make(chan mqtt.Packet)
-	errChan := make(chan error)
 
-	defer close(clientPackets)
-	defer close(brokerPackets)
-	defer close(errChan)
+	clientChan := NewChannel()
+	clientChan.SetConnection(clientConn)
+	clientChan.SetPacketListener(clientPackets)
+
+	brokerChan := NewChannel()
+	brokerChan.SetConnection(brokerConn)
+	brokerChan.SetPacketListener(brokerPackets)
 
 	go func() {
-		readPackets(clientConn, clientPackets)
-	}()
-	go func() {
-		readPackets(brokerConn, brokerPackets)
-	}()
-	go func() {
-		err := sendPackets(clientPackets, brokerConn)
-		if err != nil {
-			errChan <- err
-			log.Println("Error sending packet to broker", err)
+		for p := range clientPackets {
+			log.Println("sending packet to broker", p.Type())
+			brokerChan.Send(p)
 		}
 	}()
 	go func() {
-		err := sendPackets(brokerPackets, clientConn)
-		if err != nil {
-			errChan <- err
-			log.Println("Error sending packet to client", err)
+		for p := range brokerPackets {
+			log.Println("sending packet to client", p.Type())
+			clientChan.Send(p)
 		}
 	}()
 
-	<-errChan
-	log.Println("breaking due to errors")
+	go brokerChan.Run()
+
+	err = clientChan.Run()
+
+	close(brokerPackets)
+	close(clientPackets)
+
+	brokerChan.Stop()
+	clientChan.Stop()
 }
 
 func Serve(network string, address string) {
