@@ -21,7 +21,7 @@ func EncodePacket(buf *bytes.Buffer, p Packet) (err error) {
 		return EncodeSubscribePacket(buf, p.(*SubscribePacket))
 	case TypeSubAck:
 		return EncodeSubAckPacket(buf, p.(*SubAckPacket))
-	case TypePingReq, TypePingResp:
+	case TypePingReq, TypePingResp, TypeDisconnect:
 		return
 	default:
 		return errors.New(fmt.Sprintf("unknown packet type %d", p.Type()))

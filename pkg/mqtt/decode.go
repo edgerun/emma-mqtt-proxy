@@ -22,6 +22,8 @@ func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
 		p, err = DecodePingReqPacket(buf)
 	case TypePingResp:
 		p, err = DecodePingRespPacket(buf)
+	case TypeDisconnect:
+		p, err = DecodeDisconnectPacket(buf)
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown packet type %d", h.Type))
 	}
@@ -205,12 +207,17 @@ func DecodeSubAckPacket(buf *bytes.Buffer) (p *SubAckPacket, err error) {
 	return
 }
 
-func DecodePingRespPacket(buf *bytes.Buffer) (packet *PingRespPacket, err error) {
+func DecodePingRespPacket(_ *bytes.Buffer) (packet *PingRespPacket, err error) {
 	packet = &PingRespPacket{}
 	return
 }
 
-func DecodePingReqPacket(buf *bytes.Buffer) (packet *PingReqPacket, err error) {
+func DecodePingReqPacket(_ *bytes.Buffer) (packet *PingReqPacket, err error) {
 	packet = &PingReqPacket{}
+	return
+}
+
+func DecodeDisconnectPacket(_ *bytes.Buffer) (packet *DisconnectPacket, err error) {
+	packet = &DisconnectPacket{}
 	return
 }

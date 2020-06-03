@@ -249,3 +249,15 @@ func (*SubAckPacket) Type() PacketType {
 func (*SubAckPacket) Flags() Flags {
 	return 0
 }
+
+type DisconnectPacket struct {
+	headerContainer
+}
+
+func (*DisconnectPacket) Type() PacketType {
+	return TypeDisconnect
+}
+
+func (*DisconnectPacket) Flags() Flags {
+	return 0
+}
