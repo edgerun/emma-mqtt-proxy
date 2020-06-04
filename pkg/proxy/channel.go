@@ -40,9 +40,10 @@ type Channel struct {
 	commError      chan error
 }
 
-func NewChannel() *Channel {
+func NewChannel(conn net.Conn, in chan mqtt.Packet, out chan mqtt.Packet) *Channel {
 	return &Channel{
-		outbound: make(chan mqtt.Packet),
+		outbound: out,
+		packetListener: in,
 		inbound:  make(chan mqtt.Packet),
 		errors:   make(chan error),
 
@@ -103,7 +104,7 @@ func (c *Channel) WriterState() WriterState {
 }
 
 func (c *Channel) readLoop(conn net.Conn) {
-	streamer := mqtt.NewStreamer(conn)
+	streamer := mqtt.NewScanner(conn)
 
 	log.Printf("reading packets from [%s]...\n", conn.RemoteAddr())
 	c.readerState = ReaderStateRunning
