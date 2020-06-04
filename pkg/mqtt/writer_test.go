@@ -20,7 +20,7 @@ func TestWriterStreamerIntegration(t *testing.T) {
 		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
 	}
 
-	streamer := NewStreamer(bytes.NewReader(expected))
+	streamer := NewScanner(bytes.NewReader(expected))
 	streamer.Next()
 	p := streamer.Packet()
 

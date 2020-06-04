@@ -20,7 +20,7 @@ func TestStreamer_ParseConnectPacket(t *testing.T) {
 		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
 	})
 
-	streamer := NewStreamer(reader)
+	streamer := NewScanner(reader)
 
 	streamer.Next()
 

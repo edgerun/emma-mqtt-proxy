@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 )
 
 func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
@@ -31,6 +32,31 @@ func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
 	p.setHeader(h)
 
 	return p, err
+}
+
+func ReadHeaderFrom(r io.Reader) (h *PacketHeader, err error) {
+	// FIXME seems unnecessarily complicated
+	buf := make([]byte, 5)
+
+	n, err := r.Read(buf[:2])
+	if n != 2 {
+		// FIXME
+		err = errors.New("error reading header")
+	}
+	if err != nil {
+		return
+	}
+
+	for i := 1; (buf[i]&cMask) > 0 && i < 5; i++ {
+		n, err = r.Read(buf[i+1 : i+2])
+		if err != nil {
+			return
+		}
+	}
+
+	h = &PacketHeader{}
+	err = DecodeHeader(bytes.NewBuffer(buf), h)
+	return
 }
 
 func DecodeHeader(buf *bytes.Buffer, h *PacketHeader) (err error) {

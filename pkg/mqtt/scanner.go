@@ -2,14 +2,13 @@ package mqtt
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 )
 
 const defaultBufSize = 4096
 
-type Streamer struct {
+type Scanner struct {
 	r      io.Reader         // the underlying stream
 	limR   *io.LimitedReader // limited reader for reading packet payloads into buffer from stream
 	buf    *bytes.Buffer     // the buffer that holds packet data to be unmarshalled
@@ -19,66 +18,41 @@ type Streamer struct {
 	done   bool              // if we're done
 }
 
-func NewStreamer(r io.Reader) *Streamer {
+func NewScanner(r io.Reader) *Scanner {
 	buf := bytes.NewBuffer(make([]byte, defaultBufSize))
 	buf.Reset()
 
-	return &Streamer{
+	return &Scanner{
 		r:    r,
 		limR: &io.LimitedReader{R: r, N: 0},
 		buf:  buf,
 	}
 }
 
-func (s *Streamer) Packet() Packet {
+func (s *Scanner) Packet() Packet {
 	return s.packet
 }
 
-func (s *Streamer) Err() error {
+func (s *Scanner) Err() error {
 	if s.err == io.EOF {
 		return nil
 	}
 	return s.err
 }
 
-func (s *Streamer) setErr(err error) {
+func (s *Scanner) setErr(err error) {
 	if s.err == nil || s.err == io.EOF {
 		s.err = err
 	}
 }
 
-func (s *Streamer) bail(err error) bool {
+func (s *Scanner) bail(err error) bool {
 	s.setErr(err)
 	s.done = true
 	return false
 }
 
-func readHeaderFrom(r io.Reader) (h *PacketHeader, err error) {
-	// FIXME seems unnecessarily complicated
-	buf := make([]byte, 5)
-
-	n, err := r.Read(buf[:2])
-	if n != 2 {
-		// FIXME
-		err = errors.New("error reading header")
-	}
-	if err != nil {
-		return
-	}
-
-	for i := 1; (buf[i]&cMask) > 0 && i < 5; i++ {
-		n, err = r.Read(buf[i+1 : i+2])
-		if err != nil {
-			return
-		}
-	}
-
-	h = &PacketHeader{}
-	err = DecodeHeader(bytes.NewBuffer(buf), h)
-	return
-}
-
-func (s *Streamer) Next() bool {
+func (s *Scanner) Next() bool {
 	if s.done {
 		return false
 	}
@@ -86,7 +60,7 @@ func (s *Streamer) Next() bool {
 	r := s.r
 
 	// read the packet header
-	header, err := readHeaderFrom(r)
+	header, err := ReadHeaderFrom(r)
 	if err != nil {
 		return s.bail(err)
 	}
@@ -102,7 +76,7 @@ func (s *Streamer) Next() bool {
 	return true
 }
 
-func (s *Streamer) readPacket(header *PacketHeader) (p Packet, err error) {
+func (s *Scanner) readPacket(header *PacketHeader) (p Packet, err error) {
 	// prepare limited reader to read the packet length exactly from the underlying reader
 	if s.buf.Len() != 0 {
 		panic(fmt.Sprintf("packet buffer should be empty, was %d", s.buf.Len()))
