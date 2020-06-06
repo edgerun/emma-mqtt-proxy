@@ -82,3 +82,40 @@ func TestEncodePublishPacket(t *testing.T) {
 	}
 
 }
+
+func TestEncoder_StreamDecoderIntegration(t *testing.T) {
+	expected := []byte{
+		// connect packet
+		16,   // connect + 0 flags
+		29,   // remaining length
+		0, 6, // protocol name length
+		77, 81, 73, 115, 100, 112, // "MQIsdp"
+		3,     // protocol level
+		2,     // connect flags (X clean session)
+		0, 60, // keepalive (60)
+		0, 15, // client id length
+		109, 111, 115, 113, 112, 117, 98, // mosqpub
+		124, 57, 52, 48, 56, 45, 111, 109, // |9408-om
+	}
+
+	streamer := NewDecodingStreamer(bytes.NewReader(expected))
+	_, _ = streamer.Next()
+	p, _ := streamer.DecodePacket()
+
+	buf := bytes.NewBuffer(make([]byte, 4096))
+	buf.Reset()
+
+	writer := NewEncoder(buf)
+	err := writer.Write(p)
+	if err != nil {
+		t.Error("unexpected error", err)
+	}
+
+	actual := buf.Next(len(expected))
+
+	for i, b := range expected {
+		if b != actual[i] {
+			t.Errorf("mismatch at index %d: %d != %d", i, actual[i], b)
+		}
+	}
+}

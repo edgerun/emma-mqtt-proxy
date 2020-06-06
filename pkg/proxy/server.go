@@ -7,33 +7,29 @@ import (
 )
 
 func readPackets(conn net.Conn, packets chan mqtt.Packet) {
-	streamer := mqtt.NewStreamer(conn)
+	streamer := mqtt.NewStreamReader(mqtt.NewDecodingStreamer(conn))
 
 	log.Printf("reading packets from [%s]...\n", conn.RemoteAddr())
-	for streamer.Next() {
-		if streamer.Err() != nil {
-			log.Printf("[%s] error while reading packet stream: %s\n", conn.RemoteAddr(), streamer.Err())
+	for {
+		packet, err := streamer.Read()
+		if err != nil {
+			log.Printf("[%s] error while reading packet stream: %s\n", conn.RemoteAddr(), err)
 			break
 		}
 
-		packet := streamer.Packet()
 		log.Printf("[%s] sent packet: %s\n", conn.RemoteAddr(), mqtt.PacketTypeName(packet.Type()))
 		packets <- packet
-	}
-
-	if streamer.Err() != nil {
-		log.Println("error while reading packet stream", streamer.Err())
 	}
 
 	log.Println("Exitting packet streamer")
 }
 
 func sendPackets(packets chan mqtt.Packet, conn net.Conn) (err error) {
-	w := mqtt.NewWriter(conn)
+	w := mqtt.NewEncoder(conn)
 	var n int64
 
 	for packet := range packets {
-		n, err = w.Write(packet)
+		err = w.Write(packet)
 		log.Printf("wrote %d bytes to [%s]\n", n, conn.RemoteAddr())
 
 		if err != nil {

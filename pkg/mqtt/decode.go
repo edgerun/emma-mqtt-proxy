@@ -7,6 +7,91 @@ import (
 	"io"
 )
 
+type DecodingStreamer struct {
+	r io.Reader // the underlying stream
+
+	// stateful packet processing internals
+	limR   *io.LimitedReader // to limit the reading
+	buf    *bytes.Buffer     // buffer for the packet
+	header *PacketHeader     // the last read packet header
+
+	consumed bool // flag if packet has been consumed
+}
+
+func NewDecodingStreamer(r io.Reader) *DecodingStreamer {
+	s := &DecodingStreamer{
+		r:        r,
+		limR:     &io.LimitedReader{R: r},
+		buf:      bytes.NewBuffer(make([]byte, 4096)),
+		consumed: true,
+	}
+
+	return s
+}
+
+func (s *DecodingStreamer) Next() (*PacketHeader, error) {
+	if !s.consumed {
+		return nil, StreamStateError
+	}
+
+	header, err := ReadHeaderFrom(s.r)
+	if err != nil {
+		return nil, err
+	}
+
+	s.header = header
+	s.consumed = false
+
+	return header, nil
+}
+
+func (s *DecodingStreamer) WritePacketTo(w io.Writer) error {
+	if s.header == nil || s.consumed {
+		return StreamStateError
+	}
+
+	_, err := io.CopyN(w, s.r, int64(s.header.Length))
+	if err != nil {
+		return err
+	}
+
+	s.consumed = true
+	return nil
+}
+
+func (s *DecodingStreamer) DecodePacket() (Packet, error) {
+	if s.header == nil || s.consumed {
+		return nil, StreamStateError
+	}
+
+	buf := s.buf
+	header := s.header
+	r := s.limR
+
+	r.N = int64(header.Length)
+	// prepare buffer to read into
+	buf.Reset()
+	buf.Grow(int(header.Length)) // make sure we have enough space
+
+	// read packet data into buffer
+	n, err := buf.ReadFrom(r)
+	if err != nil {
+		return nil, err
+	}
+	if n != int64(header.Length) {
+		panic("did not read complete packet")
+	}
+
+	// unmarshal packet into buffer (we've ensured that s.buf is exactly the remaining length of the MQTT packet)
+	p, err := DecodePacket(buf, header)
+	if err != nil {
+		return nil, err
+	}
+
+	s.consumed = true
+	return p, nil
+}
+
 func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
 	switch h.Type {
 	case TypeConnect:
