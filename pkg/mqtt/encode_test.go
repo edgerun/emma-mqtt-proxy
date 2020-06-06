@@ -106,7 +106,7 @@ func TestEncoder_StreamDecoderIntegration(t *testing.T) {
 	buf.Reset()
 
 	writer := NewEncoder(buf)
-	err := writer.Write(p)
+	err := writer.WritePacket(p)
 	if err != nil {
 		t.Error("unexpected error", err)
 	}

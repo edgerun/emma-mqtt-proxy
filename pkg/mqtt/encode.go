@@ -21,13 +21,29 @@ func NewEncoder(w io.Writer) *Encoder {
 	}
 }
 
+func (w *Encoder) ReadPacketFrom(r Reader) error {
+	// if we can write directly to the underlying io writer (e.g., because we are using a DecodingStreamer)
+	if wt, ok := r.(io.WriterTo); ok {
+		_, err := wt.WriteTo(w.w)
+		return err
+	}
+
+	// otherwise we need to decode and write
+	packet, err := r.ReadPacket()
+	if err != nil {
+		return err
+	}
+	return w.WritePacket(packet)
+}
+
+
 // Write the packet into the underlying io.Encoder. It does this as follows:
 //  1. serialize the packet into a byte buffer to know how long it is
 //  2. update the remaining length field of the header to the length that was written into byte buffer holding the packet
 //  3. serialize the header into a byte buffer
 //  4. write the header buffer
 //  5. write the packet buffer
-func (w *Encoder) Write(packet Packet) (err error) {
+func (w *Encoder) WritePacket(packet Packet) (err error) {
 	// reset buffers
 	hBuf := w.hBuf
 	pBuf := w.pBuf

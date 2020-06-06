@@ -12,6 +12,7 @@ type DecodingStreamer struct {
 
 	// stateful packet processing internals
 	limR   *io.LimitedReader // to limit the reading
+	hBuf   *bytes.Buffer     // buffer used for the header
 	buf    *bytes.Buffer     // buffer for the packet
 	header *PacketHeader     // the last read packet header
 
@@ -22,11 +23,16 @@ func NewDecodingStreamer(r io.Reader) *DecodingStreamer {
 	s := &DecodingStreamer{
 		r:        r,
 		limR:     &io.LimitedReader{R: r},
+		hBuf:     bytes.NewBuffer(make([]byte, 5)),
 		buf:      bytes.NewBuffer(make([]byte, 4096)),
 		consumed: true,
 	}
 
 	return s
+}
+
+func (s *DecodingStreamer) ReadPacket() (Packet, error) {
+	return s.DecodePacket()
 }
 
 func (s *DecodingStreamer) Next() (*PacketHeader, error) {
@@ -45,18 +51,36 @@ func (s *DecodingStreamer) Next() (*PacketHeader, error) {
 	return header, nil
 }
 
-func (s *DecodingStreamer) WritePacketTo(w io.Writer) error {
+// WriteTo circumvents packet decoding and instead writes the bytes of the current header and packet directly into the
+// writer.
+func (s *DecodingStreamer) WriteTo(w io.Writer) (n int64, err error) {
 	if s.header == nil || s.consumed {
-		return StreamStateError
+		return 0, StreamStateError
 	}
 
-	_, err := io.CopyN(w, s.r, int64(s.header.Length))
+	var nn int64
+
+	nn, err = s.writeHeaderTo(w)
+	n += nn
+
+	nn, err = io.CopyN(w, s.r, int64(s.header.Length))
+	n += nn
+
 	if err != nil {
-		return err
+		return n, err
 	}
 
 	s.consumed = true
-	return nil
+	return
+}
+
+func (s *DecodingStreamer) writeHeaderTo(w io.Writer) (int64, error) {
+	s.hBuf.Reset()
+	err := EncodeHeader(s.hBuf, s.header)
+	if err != nil {
+		return 0, err
+	}
+	return s.hBuf.WriteTo(w)
 }
 
 func (s *DecodingStreamer) DecodePacket() (Packet, error) {
@@ -124,11 +148,12 @@ func ReadHeaderFrom(r io.Reader) (h *PacketHeader, err error) {
 	buf := make([]byte, 5)
 
 	n, err := r.Read(buf[:2])
+	if err != nil {
+		return
+	}
 	if n != 2 {
 		// FIXME
 		err = errors.New("error reading header")
-	}
-	if err != nil {
 		return
 	}
 
