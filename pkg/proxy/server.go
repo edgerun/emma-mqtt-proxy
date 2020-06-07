@@ -6,80 +6,34 @@ import (
 	"net"
 )
 
-func readPackets(conn net.Conn, packets chan mqtt.Packet) {
-	streamer := mqtt.NewStreamReader(mqtt.NewDecodingStreamer(conn))
-
-	log.Printf("reading packets from [%s]...\n", conn.RemoteAddr())
-	for {
-		packet, err := streamer.Read()
-		if err != nil {
-			log.Printf("[%s] error while reading packet stream: %s\n", conn.RemoteAddr(), err)
-			break
-		}
-
-		log.Printf("[%s] sent packet: %s\n", conn.RemoteAddr(), mqtt.PacketTypeName(packet.Type()))
-		packets <- packet
-	}
-
-	log.Println("Exitting packet streamer")
-}
-
-func sendPackets(packets chan mqtt.Packet, conn net.Conn) (err error) {
-	w := mqtt.NewEncoder(conn)
-	var n int64
-
-	for packet := range packets {
-		err = w.Write(packet)
-		log.Printf("wrote %d bytes to [%s]\n", n, conn.RemoteAddr())
-
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
-func startProxyHandler(clientConn net.Conn) {
-	defer clientConn.Close()
-
+func startBridgeHandler(clientConn net.Conn) {
 	brokerConn, err := net.Dial("tcp", "127.0.0.1:1884")
 	if err != nil {
 		log.Println("error dialing broker", brokerConn)
+		clientConn.Close()
 		return
 	}
-	defer brokerConn.Close()
 
-	clientPackets := make(chan mqtt.Packet)
-	brokerPackets := make(chan mqtt.Packet)
-	errChan := make(chan error)
+	bridge := NewBridge(clientConn, brokerConn)
+	errors := bridge.Start()
 
-	defer close(clientPackets)
-	defer close(brokerPackets)
-	defer close(errChan)
+	// example of how the bridge can be used to intercept packets and manipulate the routing
+	bridge.SetRouterLeft(func(header *mqtt.PacketHeader) mqtt.Writer{
+		log.Printf("client %s sent %s\n", clientConn.RemoteAddr(), header.Type)
+		return bridge.SinkRight()
+	})
 
-	go func() {
-		readPackets(clientConn, clientPackets)
-	}()
-	go func() {
-		readPackets(brokerConn, brokerPackets)
-	}()
-	go func() {
-		err := sendPackets(clientPackets, brokerConn)
-		if err != nil {
-			errChan <- err
-			log.Println("Error sending packet to broker", err)
-		}
-	}()
-	go func() {
-		err := sendPackets(brokerPackets, clientConn)
-		if err != nil {
-			errChan <- err
-			log.Println("Error sending packet to client", err)
-		}
-	}()
+	err = <-errors
+	log.Println("first error:", err)
 
-	<-errChan
-	log.Println("breaking due to errors")
+	brokerConn.Close()
+	clientConn.Close()
+
+	for err := range errors {
+		log.Println("other errors:", err)
+	}
+
+	bridge.Wait()
 }
 
 func Serve(network string, address string) {
@@ -88,14 +42,14 @@ func Serve(network string, address string) {
 		log.Fatal(err)
 	}
 
-	log.Println("Accept connection on port")
+	log.Printf("listening for connections on %s\n", ln.Addr())
 
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Calling connection handler")
-		go startProxyHandler(conn)
+		log.Printf("accepted connection from %s\n", conn.RemoteAddr())
+		go startBridgeHandler(conn)
 	}
 }
