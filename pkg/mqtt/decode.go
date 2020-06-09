@@ -74,6 +74,18 @@ func (s *DecodingStreamer) WriteTo(w io.Writer) (n int64, err error) {
 	return
 }
 
+func (s *DecodingStreamer) WritePacketTo(writer Writer) error {
+	if wt, ok := writer.(io.Writer); ok {
+		_, err := s.WriteTo(wt)
+		return err
+	}
+	packet, err := s.ReadPacket()
+	if err != nil {
+		return err
+	}
+	return writer.WritePacket(packet)
+}
+
 func (s *DecodingStreamer) writeHeaderTo(w io.Writer) (int64, error) {
 	s.hBuf.Reset()
 	err := EncodeHeader(s.hBuf, s.header)
