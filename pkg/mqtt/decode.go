@@ -136,10 +136,22 @@ func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
 		p, err = DecodeConnAckPacket(buf)
 	case TypePublish:
 		p, err = DecodePublishPacket(buf, h)
+	case TypePubAck:
+		p, err = DecodePubAckPacket(buf)
+	case TypePubRec:
+		p, err = DecodePubRecPacket(buf)
+	case TypePubRel:
+		p, err = DecodePubRelPacket(buf)
+	case TypePubComp:
+		p, err = DecodePubCompPacket(buf)
 	case TypeSubscribe:
 		p, err = DecodeSubscribePacket(buf)
 	case TypeSubAck:
 		p, err = DecodeSubAckPacket(buf)
+	case TypeUnsubscribe:
+		p, err = DecodeUnsubscribePacket(buf)
+	case TypeUnsubAck:
+		p, err = DecodeUnsubAckPacket(buf)
 	case TypePingReq:
 		p, err = DecodePingReqPacket(buf)
 	case TypePingResp:
@@ -150,7 +162,9 @@ func DecodePacket(buf *bytes.Buffer, h *PacketHeader) (p Packet, err error) {
 		return nil, errors.New(fmt.Sprintf("unknown packet type %d", h.Type))
 	}
 
-	p.setHeader(h)
+	if p != nil {
+		p.setHeader(h)
+	}
 
 	return p, err
 }
@@ -242,15 +256,35 @@ func DecodeConnectPacket(buf *bytes.Buffer) (p *ConnectPacket, err error) {
 
 	p.KeepAlive = Uint16(buf)
 
-	if buf.Len() <= 0 {
-		return
-	}
-
-	// TODO: read rest of the connect packet
-
 	p.ClientId, err = LengthEncodedString(buf)
 	if err != nil {
 		return
+	}
+	if len(p.ClientId) == 0 {
+		err = errors.New("missing ClientId in CONNECT packet")
+		return
+	}
+
+	if p.ConnectFlags.WillFlag {
+		p.WillTopic, err = LengthEncodedString(buf)
+		if err != nil {
+			return
+		}
+		p.WillMessage, err = LengthEncodedField(buf)
+		if err != nil {
+			return
+		}
+	}
+
+	if p.ConnectFlags.UserNameFlag {
+		p.UserName, err = LengthEncodedString(buf)
+		if err != nil {
+			return
+		}
+	}
+
+	if p.ConnectFlags.PasswordFlag {
+		p.Password, err = LengthEncodedField(buf)
 	}
 
 	return
@@ -295,6 +329,34 @@ func DecodePublishPacket(buf *bytes.Buffer, header *PacketHeader) (p *PublishPac
 		}
 	}
 
+	return
+}
+
+func DecodePubAckPacket(buf *bytes.Buffer) (p *PubAckPacket, err error) {
+	p = &PubAckPacket{
+		PacketId: Uint16(buf),
+	}
+	return
+}
+
+func DecodePubRecPacket(buf *bytes.Buffer) (p *PubRecPacket, err error) {
+	p = &PubRecPacket{
+		PacketId: Uint16(buf),
+	}
+	return
+}
+
+func DecodePubRelPacket(buf *bytes.Buffer) (p *PubRelPacket, err error) {
+	p = &PubRelPacket{
+		PacketId: Uint16(buf),
+	}
+	return
+}
+
+func DecodePubCompPacket(buf *bytes.Buffer) (p *PubCompPacket, err error) {
+	p = &PubCompPacket{
+		PacketId: Uint16(buf),
+	}
 	return
 }
 
@@ -352,6 +414,29 @@ func DecodeSubAckPacket(buf *bytes.Buffer) (p *SubAckPacket, err error) {
 
 	p.ReturnCodes = codes
 
+	return
+}
+
+func DecodeUnsubscribePacket(buf *bytes.Buffer) (p *UnsubscribePacket, err error) {
+	p = &UnsubscribePacket{}
+	p.PacketId = Uint16(buf)
+
+	var filters []string
+	for buf.Len() > 0 {
+		filter, err := LengthEncodedString(buf)
+		if err != nil {
+			return p, err
+		}
+		filters = append(filters, filter)
+	}
+	p.TopicFilters = filters
+
+	return
+}
+
+func DecodeUnsubAckPacket(buf *bytes.Buffer) (p *UnsubAckPacket, err error) {
+	p = &UnsubAckPacket{}
+	p.PacketId = Uint16(buf)
 	return
 }
 

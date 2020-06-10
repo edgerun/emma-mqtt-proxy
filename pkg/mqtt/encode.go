@@ -36,7 +36,6 @@ func (w *Encoder) ReadPacketFrom(r Reader) error {
 	return w.WritePacket(packet)
 }
 
-
 // Write the packet into the underlying io.Encoder. It does this as follows:
 //  1. serialize the packet into a byte buffer to know how long it is
 //  2. update the remaining length field of the header to the length that was written into byte buffer holding the packet
@@ -97,10 +96,22 @@ func EncodePacket(buf *bytes.Buffer, p Packet) (err error) {
 		return EncodeConnAckPacket(buf, p.(*ConnAckPacket))
 	case TypePublish:
 		return EncodePublishPacket(buf, p.(*PublishPacket))
+	case TypePubAck:
+		return EncodePubAckPacket(buf, p.(*PubAckPacket))
+	case TypePubRec:
+		return EncodePubRecPacket(buf, p.(*PubRecPacket))
+	case TypePubRel:
+		return EncodePubRelPacket(buf, p.(*PubRelPacket))
+	case TypePubComp:
+		return EncodePubCompPacket(buf, p.(*PubCompPacket))
 	case TypeSubscribe:
 		return EncodeSubscribePacket(buf, p.(*SubscribePacket))
 	case TypeSubAck:
 		return EncodeSubAckPacket(buf, p.(*SubAckPacket))
+	case TypeUnsubscribe:
+		return EncodeUnsubscribePacket(buf, p.(*UnsubscribePacket))
+	case TypeUnsubAck:
+		return EncodeUnsubAckPacket(buf, p.(*UnsubAckPacket))
 	case TypePingReq, TypePingResp, TypeDisconnect:
 		return
 	default:
@@ -122,7 +133,7 @@ func EncodeConnectPacket(buf *bytes.Buffer, p *ConnectPacket) (err error) {
 	PutLengthEncodedString(buf, p.ClientId)
 	if p.WillFlag {
 		PutLengthEncodedString(buf, p.WillTopic)
-		PutLengthEncodedString(buf, p.WillMessage) // FIXME
+		PutLengthEncodedField(buf, p.WillMessage)
 	}
 	if p.UserNameFlag {
 		PutLengthEncodedString(buf, p.UserName)
@@ -179,6 +190,26 @@ func EncodePublishPacket(buf *bytes.Buffer, p *PublishPacket) (err error) {
 	return
 }
 
+func EncodePubAckPacket(buf *bytes.Buffer, p *PubAckPacket) (err error) {
+	PutUint16(buf, p.PacketId)
+	return
+}
+
+func EncodePubRecPacket(buf *bytes.Buffer, p *PubRecPacket) (err error) {
+	PutUint16(buf, p.PacketId)
+	return
+}
+
+func EncodePubRelPacket(buf *bytes.Buffer, p *PubRelPacket) (err error) {
+	PutUint16(buf, p.PacketId)
+	return
+}
+
+func EncodePubCompPacket(buf *bytes.Buffer, p *PubCompPacket) (err error) {
+	PutUint16(buf, p.PacketId)
+	return
+}
+
 func EncodeSubscribePacket(buf *bytes.Buffer, p *SubscribePacket) (err error) {
 	PutUint16(buf, p.PacketId)
 
@@ -197,5 +228,20 @@ func EncodeSubAckPacket(buf *bytes.Buffer, p *SubAckPacket) (err error) {
 		buf.WriteByte(code & 0b10000011)
 	}
 
+	return
+}
+
+func EncodeUnsubscribePacket(buf *bytes.Buffer, p *UnsubscribePacket) (err error) {
+	PutUint16(buf, p.PacketId)
+
+	for _, filter := range p.TopicFilters {
+		PutLengthEncodedString(buf, filter)
+	}
+
+	return
+}
+
+func EncodeUnsubAckPacket(buf *bytes.Buffer, p *UnsubAckPacket) (err error) {
+	PutUint16(buf, p.PacketId)
 	return
 }

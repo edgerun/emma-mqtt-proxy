@@ -121,7 +121,7 @@ type ConnectPacket struct {
 	KeepAlive     uint16
 	ClientId      string
 	WillTopic     string
-	WillMessage   string // FIXME: should be a []byte field
+	WillMessage   []byte
 	UserName      string
 	Password      []byte
 }
@@ -217,6 +217,65 @@ func (p *PublishPacket) Flags() (flags Flags) {
 	return
 }
 
+type PubAckPacket struct {
+	headerContainer
+	PacketId uint16
+}
+
+func (p PubAckPacket) Type() PacketType {
+	return TypePubAck
+}
+
+func (p PubAckPacket) Flags() Flags {
+	return 0
+}
+
+type PubRecPacket struct {
+	headerContainer
+	PacketId uint16
+}
+
+func (p PubRecPacket) Type() PacketType {
+	return TypePubRec
+}
+
+func (p PubRecPacket) Flags() Flags {
+	return 0
+}
+
+type PubRelPacket struct {
+	headerContainer
+	PacketId uint16
+}
+
+func (p PubRelPacket) Type() PacketType {
+	return TypePubRel
+}
+
+// Fixed header flags for the PUBREL packet:
+//
+//       +--------+--------+--------+--------+
+// bit   | 3      | 2      | 1      | 0      |
+//       +--------+-----------------+--------+
+// value | 0      | 0      | 1      | 0      |
+//       +--------+-----------------+--------+
+func (p PubRelPacket) Flags() Flags {
+	return 2
+}
+
+type PubCompPacket struct {
+	headerContainer
+	PacketId uint16
+}
+
+func (p PubCompPacket) Type() PacketType {
+	return TypePubComp
+}
+
+func (p PubCompPacket) Flags() Flags {
+	return 0
+}
+
 type SubscribePacket struct {
 	headerContainer
 	PacketId      uint16
@@ -247,6 +306,40 @@ func (*SubAckPacket) Type() PacketType {
 }
 
 func (*SubAckPacket) Flags() Flags {
+	return 0
+}
+
+type UnsubscribePacket struct {
+	headerContainer
+	PacketId     uint16
+	TopicFilters []string
+}
+
+func (p UnsubscribePacket) Type() PacketType {
+	return TypeUnsubscribe
+}
+
+// Fixed header flags for the SUBSCRIBE packet:
+//
+//       +--------+--------+--------+--------+
+// bit   | 3      | 2      | 1      | 0      |
+//       +--------+-----------------+--------+
+// value | 0      | 0      | 1      | 0      |
+//       +--------+-----------------+--------+
+func (p UnsubscribePacket) Flags() Flags {
+	return 2
+}
+
+type UnsubAckPacket struct {
+	headerContainer
+	PacketId uint16
+}
+
+func (p UnsubAckPacket) Type() PacketType {
+	return TypeUnsubAck
+}
+
+func (p UnsubAckPacket) Flags() Flags {
 	return 0
 }
 
